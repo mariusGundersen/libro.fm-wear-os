@@ -1,0 +1,3 @@
+-dontwarn javax.annotation.**
+-keep class fm.libro.wearos.api.models.** { *; }
+-keep class fm.libro.wearos.data.** { *; }
