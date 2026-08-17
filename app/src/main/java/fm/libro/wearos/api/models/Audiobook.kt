@@ -28,8 +28,8 @@ data class Audiobook(
     val trackCount: Int
         get() = audiobookInfo?.trackCount ?: 0
 
-    val progressSeconds: Int
-        get() = userMetadata?.trackSeconds ?: 0
+    val progressSeconds: Float
+        get() = userMetadata?.trackSeconds ?: 0.0f
 }
 
 data class AudiobookInfo(
@@ -43,7 +43,7 @@ data class AudiobookInfo(
 
 data class UserMetadata(
     @SerializedName("track_index") val trackIndex: Int?,
-    @SerializedName("track_seconds") val trackSeconds: Int?,
+    @SerializedName("track_seconds") val trackSeconds: Float?,
     @SerializedName("finished") val finished: Boolean?,
     @SerializedName("added_at") val addedAt: String?,
 )
