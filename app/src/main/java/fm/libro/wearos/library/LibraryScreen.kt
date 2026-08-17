@@ -2,6 +2,7 @@ package fm.libro.wearos.library
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -16,12 +17,15 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.foundation.lazy.items
 import androidx.wear.compose.material3.Card
+import androidx.wear.compose.material3.CardDefaults
 import androidx.wear.compose.material3.CircularProgressIndicator
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.Text
@@ -43,6 +47,11 @@ fun LibraryScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 CircularProgressIndicator()
+
+                Text(
+                    text = "Loading library",
+                    style = MaterialTheme.typography.bodySmall
+                )
             }
         }
         state.error != null -> {
@@ -67,7 +76,7 @@ fun LibraryScreen(
                 item {
                     Text(
                         text = "My Library",
-                        style = MaterialTheme.typography.titleMedium,
+                        style = MaterialTheme.typography.titleLarge,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                     )
                 }
@@ -93,46 +102,43 @@ private fun BookCard(
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 4.dp),
+            .padding(0.dp),
+        contentPadding = PaddingValues(0.dp)
     ) {
-        Row(
-            modifier = Modifier.padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
+        AsyncImage(
+            model = "https:" + book.coverUrl,
+            contentDescription = book.title,
+            modifier = Modifier
+                .padding(0.dp)
+                .fillMaxWidth()
+                .clipToBounds(),
+            contentScale = ContentScale.FillWidth,
+        )
+
+        Column(
+            modifier = Modifier.padding(12.dp)
         ) {
-            AsyncImage(
-                model = book.coverUrl,
-                contentDescription = book.title,
-                modifier = Modifier
-                    .size(48.dp)
-                    .clip(MaterialTheme.shapes.small),
-                contentScale = ContentScale.Crop,
+            Text(
+                text = book.title,
+                style = MaterialTheme.typography.bodyLarge,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
             )
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = book.title,
-                    style = MaterialTheme.typography.bodyLarge,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = book.authorString,
+                style = MaterialTheme.typography.bodySmall,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            if (isDownloaded) {
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
-                    text = book.authorString,
-                    style = MaterialTheme.typography.bodySmall,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    text = "Downloaded",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary,
                 )
-                if (isDownloaded) {
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = "Downloaded",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                }
             }
         }
     }
