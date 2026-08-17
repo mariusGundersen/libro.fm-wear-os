@@ -17,7 +17,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             LibroFmTheme {
                 AppNavGraph(
-                    isLoggedIn = authManager.isLoggedIn,
+                    authManager = authManager,
                     onLogout = { authManager.logout() },
                 )
             }

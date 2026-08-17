@@ -1,11 +1,12 @@
+import com.android.build.api.dsl.ApplicationExtension
+
 plugins {
     id("com.android.application")
-    id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
     id("com.google.devtools.ksp")
 }
 
-android {
+extensions.configure<ApplicationExtension> {
     namespace = "fm.libro.wearos"
     compileSdk = 37
 
@@ -31,10 +32,6 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
-    }
-
-    kotlinOptions {
-        jvmTarget = "17"
     }
 
     buildFeatures {
@@ -78,7 +75,7 @@ dependencies {
     ksp("androidx.room:room-compiler:2.8.4")
 
     // DataStore
-    implementation("androidx.datastore:datastore-preferences:1.1.7")
+    implementation("androidx.datastore:datastore-preferences:1.2.1")
 
     // Image loading
     implementation("io.coil-kt:coil-compose:2.7.0")

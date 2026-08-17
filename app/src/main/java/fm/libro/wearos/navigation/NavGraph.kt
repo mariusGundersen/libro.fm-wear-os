@@ -7,6 +7,7 @@ import androidx.navigation.navArgument
 import androidx.wear.compose.navigation.SwipeDismissableNavHost
 import androidx.wear.compose.navigation.composable
 import androidx.wear.compose.navigation.rememberSwipeDismissableNavController
+import fm.libro.wearos.auth.AuthManager
 import fm.libro.wearos.auth.LoginScreen
 import fm.libro.wearos.auth.LoginViewModel
 import fm.libro.wearos.library.BookDetailScreen
@@ -15,6 +16,8 @@ import fm.libro.wearos.library.LibraryScreen
 import fm.libro.wearos.library.LibraryViewModel
 import fm.libro.wearos.player.PlayerScreen
 import fm.libro.wearos.player.PlayerViewModel
+import androidx.activity.viewModels
+import kotlin.getValue
 
 object Routes {
     const val LOGIN = "login"
@@ -28,14 +31,14 @@ object Routes {
 
 @Composable
 fun AppNavGraph(
-    isLoggedIn: Boolean,
+    authManager: AuthManager,
     onLogout: () -> Unit,
 ) {
     val navController = rememberSwipeDismissableNavController()
 
     SwipeDismissableNavHost(
         navController = navController,
-        startDestination = if (isLoggedIn) Routes.LIBRARY else Routes.LOGIN,
+        startDestination = if (authManager.isLoggedIn) Routes.LIBRARY else Routes.LOGIN,
     ) {
         composable(Routes.LOGIN) {
             val viewModel: LoginViewModel = viewModel()
