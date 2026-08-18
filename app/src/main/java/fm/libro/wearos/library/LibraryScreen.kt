@@ -3,29 +3,26 @@ package fm.libro.wearos.library
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.paging.LoadState
+import androidx.paging.compose.collectAsLazyPagingItems
+import androidx.paging.compose.itemKey
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
-import androidx.wear.compose.foundation.lazy.items
 import androidx.wear.compose.material3.Card
-import androidx.wear.compose.material3.CardDefaults
 import androidx.wear.compose.material3.CircularProgressIndicator
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.Text
@@ -37,10 +34,11 @@ fun LibraryScreen(
     viewModel: LibraryViewModel,
     onBookClick: (String) -> Unit,
 ) {
-    val state by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsState()
+    val books = viewModel.books.collectAsLazyPagingItems()
 
-    when {
-        state.isLoading -> {
+    when (books.loadState.refresh) {
+        is LoadState.Loading -> {
             Column(
                 modifier = Modifier.fillMaxSize(),
                 verticalArrangement = Arrangement.Center,
@@ -54,7 +52,8 @@ fun LibraryScreen(
                 )
             }
         }
-        state.error != null -> {
+
+        is LoadState.Error -> {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -63,15 +62,20 @@ fun LibraryScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Text(
-                    text = state.error ?: "Unknown error",
+                    text = (books.loadState.refresh as LoadState.Error).error.message ?: "Unknown error",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error,
                 )
             }
         }
+
         else -> {
             ScalingLazyColumn(
                 modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(
+                    horizontal = 10.dp,
+                    vertical = 32.dp
+                )
             ) {
                 item {
                     Text(
@@ -80,12 +84,29 @@ fun LibraryScreen(
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                     )
                 }
-                items(state.books, key = { it.isbn }) { book ->
-                    BookCard(
-                        book = book,
-                        isDownloaded = book.isbn in state.downloadedIsbns,
-                        onClick = { onBookClick(book.isbn) },
-                    )
+                items(books.itemCount, key = books.itemKey { it.isbn }) { index ->
+                    val book = books[index]
+                    if(book != null) {
+                        BookCard(
+                            book = book,
+                            isDownloaded = book.isbn in uiState.downloadedIsbns,
+                            onClick = { onBookClick(book.isbn) },
+                        )
+                    }else {
+                        BookCardPlaceholder()
+                    }
+                }
+                if (books.loadState.append is LoadState.Loading) {
+                    item {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                        ) {
+                            CircularProgressIndicator()
+                        }
+                    }
                 }
             }
         }
@@ -106,7 +127,7 @@ private fun BookCard(
         contentPadding = PaddingValues(0.dp)
     ) {
         AsyncImage(
-            model = "https:" + book.coverUrl,
+            model = "https:${book.coverUrl}",
             contentDescription = book.title,
             modifier = Modifier
                 .padding(0.dp)
@@ -141,5 +162,17 @@ private fun BookCard(
                 )
             }
         }
+    }
+}
+
+@Composable
+fun BookCardPlaceholder() {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(0.dp),
+        contentPadding = PaddingValues(0.dp)
+    ) {
+        CircularProgressIndicator()
     }
 }

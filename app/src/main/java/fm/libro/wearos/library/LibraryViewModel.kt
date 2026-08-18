@@ -3,19 +3,21 @@ package fm.libro.wearos.library
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import fm.libro.wearos.api.LibroFmClient
+import androidx.paging.Pager
+import androidx.paging.PagingConfig
+import androidx.paging.PagingData
+import androidx.paging.cachedIn
+import fm.libro.wearos.api.LibraryPagingSource
 import fm.libro.wearos.api.models.Audiobook
 import fm.libro.wearos.auth.AuthManager
 import fm.libro.wearos.data.AppDatabase
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 data class LibraryUiState(
-    val books: List<Audiobook> = emptyList(),
-    val isLoading: Boolean = false,
-    val error: String? = null,
     val downloadedIsbns: Set<String> = emptySet(),
 )
 
@@ -27,8 +29,21 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
     private val _uiState = MutableStateFlow(LibraryUiState())
     val uiState: StateFlow<LibraryUiState> = _uiState.asStateFlow()
 
+    val books: Flow<PagingData<Audiobook>>
+
     init {
-        loadLibrary()
+        val token = authManager.token
+        books = if (token != null) {
+            Pager(
+                config = PagingConfig(pageSize = 10, enablePlaceholders = false),
+                pagingSourceFactory = { LibraryPagingSource(token) },
+            ).flow.cachedIn(viewModelScope)
+        } else {
+            Pager(
+                config = PagingConfig(pageSize = 10, enablePlaceholders = false),
+                pagingSourceFactory = { LibraryPagingSource("") },
+            ).flow.cachedIn(viewModelScope)
+        }
         observeDownloads()
     }
 
@@ -37,30 +52,6 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
             db.downloadedBookDao().getAll().collect { downloaded ->
                 _uiState.value = _uiState.value.copy(
                     downloadedIsbns = downloaded.map { it.isbn }.toSet(),
-                )
-            }
-        }
-    }
-
-    fun loadLibrary() {
-        val token = authManager.token ?: run {
-            _uiState.value = _uiState.value.copy(error = "Not logged in")
-            return
-        }
-
-        _uiState.value = _uiState.value.copy(isLoading = true, error = null)
-
-        viewModelScope.launch {
-            try {
-                val books = LibroFmClient.getAllLibraryBooks(token)
-                _uiState.value = _uiState.value.copy(
-                    books = books,
-                    isLoading = false,
-                )
-            } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    error = "Failed to load library: ${e.message}",
                 )
             }
         }

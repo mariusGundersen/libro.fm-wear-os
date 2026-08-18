@@ -57,9 +57,17 @@ class BookDetailViewModel(
 
         viewModelScope.launch {
             try {
-                val books = LibroFmClient.getAllLibraryBooks(token)
-                val book = books.find { it.isbn == isbn }
-                _uiState.value = _uiState.value.copy(book = book, isLoading = false)
+                var page = 1
+                var totalPages = 1
+                var found: fm.libro.wearos.api.models.Audiobook? = null
+                while (page <= totalPages) {
+                    val response = LibroFmClient.getLibrary(token, page)
+                    found = response.audiobooks.find { it.isbn == isbn }
+                    if (found != null) break
+                    totalPages = response.totalPages
+                    page++
+                }
+                _uiState.value = _uiState.value.copy(book = found, isLoading = false)
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,

@@ -52,7 +52,7 @@ fun BookDetailScreen(
             ){
                 state.book?.let { book ->
                     AsyncImage(
-                        model = "https:" + book.coverUrl,
+                        model = "https:${book.coverUrl}",
                         contentDescription = book.title,
                         modifier = Modifier
                             .fillMaxWidth()
