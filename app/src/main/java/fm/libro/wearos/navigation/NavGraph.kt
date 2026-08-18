@@ -12,15 +12,17 @@ import fm.libro.wearos.auth.LoginScreen
 import fm.libro.wearos.auth.LoginViewModel
 import fm.libro.wearos.library.BookDetailScreen
 import fm.libro.wearos.library.BookDetailViewModel
+import fm.libro.wearos.library.DownloadedBooksScreen
+import fm.libro.wearos.library.DownloadedBooksViewModel
 import fm.libro.wearos.library.LibraryScreen
 import fm.libro.wearos.library.LibraryViewModel
 import fm.libro.wearos.player.PlayerScreen
 import fm.libro.wearos.player.PlayerViewModel
-import androidx.activity.viewModels
 import kotlin.getValue
 
 object Routes {
     const val LOGIN = "login"
+    const val DOWNLOADED = "downloaded"
     const val LIBRARY = "library"
     const val BOOK_DETAIL = "book/{isbn}"
     const val PLAYER = "player/{isbn}"
@@ -38,16 +40,29 @@ fun AppNavGraph(
 
     SwipeDismissableNavHost(
         navController = navController,
-        startDestination = if (authManager.isLoggedIn) Routes.LIBRARY else Routes.LOGIN,
+        startDestination = if (authManager.isLoggedIn) Routes.DOWNLOADED else Routes.LOGIN,
     ) {
         composable(Routes.LOGIN) {
             val viewModel: LoginViewModel = viewModel()
             LoginScreen(
                 viewModel = viewModel,
                 onLoginSuccess = {
-                    navController.navigate(Routes.LIBRARY) {
+                    navController.navigate(Routes.DOWNLOADED) {
                         popUpTo(Routes.LOGIN) { inclusive = true }
                     }
+                },
+            )
+        }
+
+        composable(Routes.DOWNLOADED) {
+            val viewModel: DownloadedBooksViewModel = viewModel()
+            DownloadedBooksScreen(
+                viewModel = viewModel,
+                onBookClick = { isbn ->
+                    navController.navigate(Routes.bookDetail(isbn))
+                },
+                onBrowseLibrary = {
+                    navController.navigate(Routes.LIBRARY)
                 },
             )
         }

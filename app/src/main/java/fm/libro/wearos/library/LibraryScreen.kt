@@ -8,10 +8,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
@@ -34,7 +31,6 @@ fun LibraryScreen(
     viewModel: LibraryViewModel,
     onBookClick: (String) -> Unit,
 ) {
-    val uiState by viewModel.uiState.collectAsState()
     val books = viewModel.books.collectAsLazyPagingItems()
 
     when (books.loadState.refresh) {
@@ -48,7 +44,7 @@ fun LibraryScreen(
 
                 Text(
                     text = "Loading library",
-                    style = MaterialTheme.typography.bodySmall
+                    style = MaterialTheme.typography.bodySmall,
                 )
             }
         }
@@ -74,25 +70,24 @@ fun LibraryScreen(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(
                     horizontal = 10.dp,
-                    vertical = 32.dp
-                )
+                    vertical = 32.dp,
+                ),
             ) {
                 item {
                     Text(
-                        text = "My Library",
+                        text = "All Books",
                         style = MaterialTheme.typography.titleLarge,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                     )
                 }
                 items(books.itemCount, key = books.itemKey { it.isbn }) { index ->
                     val book = books[index]
-                    if(book != null) {
+                    if (book != null) {
                         BookCard(
                             book = book,
-                            isDownloaded = book.isbn in uiState.downloadedIsbns,
                             onClick = { onBookClick(book.isbn) },
                         )
-                    }else {
+                    } else {
                         BookCardPlaceholder()
                     }
                 }
@@ -116,7 +111,6 @@ fun LibraryScreen(
 @Composable
 private fun BookCard(
     book: Audiobook,
-    isDownloaded: Boolean,
     onClick: () -> Unit,
 ) {
     Card(
@@ -124,7 +118,7 @@ private fun BookCard(
         modifier = Modifier
             .fillMaxWidth()
             .padding(0.dp),
-        contentPadding = PaddingValues(0.dp)
+        contentPadding = PaddingValues(0.dp),
     ) {
         AsyncImage(
             model = "https:${book.coverUrl}",
@@ -137,7 +131,7 @@ private fun BookCard(
         )
 
         Column(
-            modifier = Modifier.padding(12.dp)
+            modifier = Modifier.padding(12.dp),
         ) {
             Text(
                 text = book.title,
@@ -153,14 +147,6 @@ private fun BookCard(
                 overflow = TextOverflow.Ellipsis,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            if (isDownloaded) {
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = "Downloaded",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-            }
         }
     }
 }
@@ -171,7 +157,7 @@ fun BookCardPlaceholder() {
         modifier = Modifier
             .fillMaxWidth()
             .padding(0.dp),
-        contentPadding = PaddingValues(0.dp)
+        contentPadding = PaddingValues(0.dp),
     ) {
         CircularProgressIndicator()
     }
