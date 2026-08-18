@@ -10,7 +10,6 @@ import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import fm.libro.wearos.MainActivity
 import fm.libro.wearos.api.LibroFmClient
-import fm.libro.wearos.api.models.Audiobook
 import fm.libro.wearos.auth.AuthManager
 import fm.libro.wearos.data.AppDatabase
 import fm.libro.wearos.data.DownloadedBookEntity
@@ -22,6 +21,7 @@ import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.File
+import java.util.zip.ZipInputStream
 
 class DownloadService : Service() {
 
@@ -101,15 +101,24 @@ class DownloadService : Service() {
                     )
                 } else {
                     manifest.parts.forEachIndexed { index, part ->
-                        val file = dir.resolve("track_${index + 1}.mp3")
-                        updateNotification("Downloading $title (track ${index + 1}/${manifest.parts.size})...", 0)
-                        downloadFile(part.url, file) { partProgress ->
+                        val zipFile = dir.resolve("part_${index + 1}.zip")
+                        updateNotification(
+                            "Downloading $title (part ${index + 1}/${manifest.parts.size})...",
+                            0,
+                        )
+                        downloadFile(part.url, zipFile) { partProgress ->
                             val totalProgress = ((index.toFloat() / manifest.parts.size) +
                                 (partProgress.toFloat() / manifest.parts.size / 100f)) * 100f
                             updateNotification("Downloading $title...", totalProgress.toInt())
                         }
+                        extractZip(zipFile, dir)
+                        zipFile.delete()
                     }
-                    val totalSize = dir.listFiles()?.sumOf { it.length() } ?: 0L
+                    val mp3Files = dir.listFiles()
+                        ?.filter { it.extension == "mp3" }
+                        ?.sorted() ?: emptyList()
+                    val totalSize = mp3Files.sumOf { it.length() }
+
                     db().downloadedBookDao().insert(
                         DownloadedBookEntity(
                             isbn = isbn,
@@ -120,7 +129,7 @@ class DownloadService : Service() {
                             filePath = dir.absolutePath,
                             fileSizeBytes = totalSize,
                             durationSeconds = duration,
-                            trackCount = manifest.parts.size,
+                            trackCount = mp3Files.size,
                             tracksJson = "[]",
                             downloadedAt = System.currentTimeMillis(),
                         )
@@ -161,6 +170,23 @@ class DownloadService : Service() {
                         onProgress((totalRead * 100 / contentLength).toInt())
                     }
                 }
+            }
+        }
+    }
+
+    private fun extractZip(zipFile: File, targetDir: File) {
+        ZipInputStream(zipFile.inputStream()).use { zip ->
+            var entry = zip.nextEntry
+            while (entry != null) {
+                if (!entry.isDirectory) {
+                    val outFile = targetDir.resolve(entry.name)
+                    outFile.parentFile?.mkdirs()
+                    outFile.outputStream().use { output ->
+                        zip.copyTo(output)
+                    }
+                }
+                zip.closeEntry()
+                entry = zip.nextEntry
             }
         }
     }

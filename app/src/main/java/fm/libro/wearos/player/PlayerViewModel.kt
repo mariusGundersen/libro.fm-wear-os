@@ -20,7 +20,6 @@ data class PlayerUiState(
     val isPlaying: Boolean = false,
     val currentPositionMs: Long = 0,
     val durationMs: Long = 0,
-    val playbackSpeed: Float = 1.0f,
     val isLoading: Boolean = true,
     val tracks: List<TrackInfo> = emptyList(),
     val currentTrackIndex: Int = 0,
@@ -62,7 +61,6 @@ class PlayerViewModel(
                 tracks = tracks,
                 currentTrackIndex = progress?.trackIndex ?: 0,
                 currentPositionMs = progress?.positionMs ?: 0,
-                playbackSpeed = progress?.playbackSpeed ?: 1.0f,
             )
         }
     }
@@ -109,10 +107,6 @@ class PlayerViewModel(
         seekTo(maxOf(newPos, 0))
     }
 
-    fun setPlaybackSpeed(speed: Float) {
-        _uiState.value = _uiState.value.copy(playbackSpeed = speed)
-    }
-
     fun nextTrack() {
         val state = _uiState.value
         if (state.currentTrackIndex < state.tracks.size - 1) {
@@ -142,7 +136,6 @@ class PlayerViewModel(
             action = if (play) PlaybackService.ACTION_PLAY else PlaybackService.ACTION_PAUSE
             putExtra(PlaybackService.EXTRA_FILE_PATH, track.filePath)
             putExtra(PlaybackService.EXTRA_POSITION_MS, state.currentPositionMs)
-            putExtra(PlaybackService.EXTRA_SPEED, state.playbackSpeed)
             putExtra(PlaybackService.EXTRA_ISBN, isbn)
         }
         context.startForegroundService(intent)
@@ -156,7 +149,7 @@ class PlayerViewModel(
                     isbn = isbn,
                     trackIndex = state.currentTrackIndex,
                     positionMs = state.currentPositionMs,
-                    playbackSpeed = state.playbackSpeed,
+                    playbackSpeed = 1.0f,
                     updatedAt = System.currentTimeMillis(),
                 )
             )

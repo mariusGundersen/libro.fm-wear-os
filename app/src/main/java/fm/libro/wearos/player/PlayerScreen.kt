@@ -165,27 +165,6 @@ fun PlayerScreen(viewModel: PlayerViewModel) {
                 }
             }
         }
-
-        Spacer(modifier = Modifier.height(4.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            listOf(0.75f, 1.0f, 1.25f, 1.5f, 2.0f).forEach { speed ->
-                Button(
-                    onClick = { viewModel.setPlaybackSpeed(speed) },
-                    colors = if (state.playbackSpeed == speed) {
-                        ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary,
-                        )
-                    } else {
-                        ButtonDefaults.buttonColors()
-                    },
-                ) {
-                    Text(
-                        text = "${speed}x",
-                        style = MaterialTheme.typography.labelSmall,
-                    )
-                }
-            }
-        }
     }
 }
 

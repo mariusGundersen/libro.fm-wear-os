@@ -32,12 +32,10 @@ class PlaybackService : MediaSessionService() {
             ACTION_PLAY -> {
                 val filePath = intent.getStringExtra(EXTRA_FILE_PATH) ?: return START_NOT_STICKY
                 val positionMs = intent.getLongExtra(EXTRA_POSITION_MS, 0)
-                val speed = intent.getFloatExtra(EXTRA_SPEED, 1.0f)
 
                 exoPlayer?.apply {
                     val mediaItem = MediaItem.fromUri("file://$filePath")
                     setMediaItem(mediaItem)
-                    playbackParameters = androidx.media3.common.PlaybackParameters(speed)
                     seekTo(positionMs)
                     prepare()
                     playWhenReady = true
@@ -108,7 +106,6 @@ class PlaybackService : MediaSessionService() {
         const val ACTION_STOP = "fm.libro.wearos.player.STOP"
         const val EXTRA_FILE_PATH = "file_path"
         const val EXTRA_POSITION_MS = "position_ms"
-        const val EXTRA_SPEED = "speed"
         const val EXTRA_ISBN = "isbn"
         const val CHANNEL_ID = "audiobook_playback"
         const val NOTIFICATION_ID = 1001
