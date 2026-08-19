@@ -29,7 +29,7 @@ import fm.libro.wearos.api.models.Audiobook
 @Composable
 fun LibraryScreen(
     viewModel: LibraryViewModel,
-    onBookClick: (String) -> Unit,
+    onBookClick: (String, Audiobook) -> Unit,
 ) {
     val books = viewModel.books.collectAsLazyPagingItems()
 
@@ -85,7 +85,7 @@ fun LibraryScreen(
                     if (book != null) {
                         BookCard(
                             book = book,
-                            onClick = { onBookClick(book.isbn) },
+                            onClick = { onBookClick(book.isbn, book) },
                         )
                     } else {
                         BookCardPlaceholder()

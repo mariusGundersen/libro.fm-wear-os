@@ -12,6 +12,8 @@ import fm.libro.wearos.auth.LoginScreen
 import fm.libro.wearos.auth.LoginViewModel
 import fm.libro.wearos.library.BookDetailScreen
 import fm.libro.wearos.library.BookDetailViewModel
+import fm.libro.wearos.library.DownloadedBookDetailScreen
+import fm.libro.wearos.library.DownloadedBookDetailViewModel
 import fm.libro.wearos.library.DownloadedBooksScreen
 import fm.libro.wearos.library.DownloadedBooksViewModel
 import fm.libro.wearos.library.LibraryScreen
@@ -25,9 +27,11 @@ object Routes {
     const val DOWNLOADED = "downloaded"
     const val LIBRARY = "library"
     const val BOOK_DETAIL = "book/{isbn}"
+    const val DOWNLOADED_BOOK_DETAIL = "downloaded_book/{isbn}"
     const val PLAYER = "player/{isbn}"
 
     fun bookDetail(isbn: String) = "book/$isbn"
+    fun downloadedBookDetail(isbn: String) = "downloaded_book/$isbn"
     fun player(isbn: String) = "player/$isbn"
 }
 
@@ -59,7 +63,7 @@ fun AppNavGraph(
             DownloadedBooksScreen(
                 viewModel = viewModel,
                 onBookClick = { isbn ->
-                    navController.navigate(Routes.bookDetail(isbn))
+                    navController.navigate(Routes.downloadedBookDetail(isbn))
                 },
                 onBrowseLibrary = {
                     navController.navigate(Routes.LIBRARY)
@@ -71,7 +75,8 @@ fun AppNavGraph(
             val viewModel: LibraryViewModel = viewModel()
             LibraryScreen(
                 viewModel = viewModel,
-                onBookClick = { isbn ->
+                onBookClick = { isbn, book ->
+                    BookDetailViewModel.cacheBook(book)
                     navController.navigate(Routes.bookDetail(isbn))
                 },
             )
@@ -83,6 +88,20 @@ fun AppNavGraph(
         ) {
             val viewModel: BookDetailViewModel = viewModel()
             BookDetailScreen(
+                viewModel = viewModel,
+                onPlay = { isbn ->
+                    navController.navigate(Routes.player(isbn))
+                },
+                onBack = { navController.popBackStack() },
+            )
+        }
+
+        composable(
+            Routes.DOWNLOADED_BOOK_DETAIL,
+            arguments = listOf(navArgument("isbn") { type = NavType.StringType }),
+        ) {
+            val viewModel: DownloadedBookDetailViewModel = viewModel()
+            DownloadedBookDetailScreen(
                 viewModel = viewModel,
                 onPlay = { isbn ->
                     navController.navigate(Routes.player(isbn))

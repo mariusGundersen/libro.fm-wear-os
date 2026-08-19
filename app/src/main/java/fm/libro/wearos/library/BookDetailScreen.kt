@@ -46,95 +46,87 @@ fun BookDetailScreen(
         modifier = Modifier
             .fillMaxSize(),
     ) {
-        when {
-            state.isLoading -> {
-                item { CircularProgressIndicator() }
+        item {
+            state.book?.let { book ->
+                AudiobookInfo(book, state.coverLocalPath)
             }
 
-            else -> {
-                item {
-                    state.book?.let { book ->
-                        AudiobookInfo(book, state.coverLocalPath)
-                    }
+        }
 
-                }
+        item {
+            Spacer(modifier = Modifier.height(12.dp))
+        }
 
-                item {
-                    Spacer(modifier = Modifier.height(12.dp))
-                }
-
-                item {
-                    when {
-                        state.isDownloading -> {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                CircularProgressIndicator(modifier = Modifier.size(48.dp))
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Text(
-                                    text = "Downloading...",
-                                    style = MaterialTheme.typography.bodySmall,
-                                )
-                            }
-                        }
-
-                        state.isDownloaded -> {
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            ) {
-                                Button(
-                                    onClick = { onPlay(state.book?.isbn ?: "") },
-                                    modifier = Modifier.weight(1f),
-                                ) {
-                                    Icon(
-                                        painter = painterResource(R.drawable.ic_play),
-                                        contentDescription = "Play",
-                                    )
-                                }
-                                OutlinedButton(
-                                    onClick = { viewModel.deleteBook() },
-                                ) {
-                                    Icon(
-                                        painter = painterResource(R.drawable.ic_delete),
-                                        contentDescription = "Delete",
-                                    )
-                                }
-                            }
-                        }
-
-                        state.manifest != null -> {
-                            Button(
-                                onClick = { viewModel.startDownload() },
-                                modifier = Modifier.fillMaxWidth(),
-                            ) {
-                                Icon(
-                                    painter = painterResource(R.drawable.ic_playlist_add),
-                                    contentDescription = "Download",
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text("Download")
-                            }
-                        }
-
-                        else -> {
-                            Button(
-                                onClick = { viewModel.fetchManifest() },
-                                modifier = Modifier.fillMaxWidth(),
-                            ) {
-                                Text("Check download")
-                            }
-                        }
-                    }
-                }
-
-                item {
-                    state.error?.let { error ->
+        item {
+            when {
+                state.isDownloading -> {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        CircularProgressIndicator(modifier = Modifier.size(48.dp))
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = error,
+                            text = "Downloading...",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.error,
                         )
                     }
                 }
+
+                state.isDownloaded -> {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Button(
+                            onClick = { onPlay(state.book?.isbn ?: "") },
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_play),
+                                contentDescription = "Play",
+                            )
+                        }
+                        OutlinedButton(
+                            onClick = { viewModel.deleteBook() },
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_delete),
+                                contentDescription = "Delete",
+                            )
+                        }
+                    }
+                }
+
+                state.manifest != null -> {
+                    Button(
+                        onClick = { viewModel.startDownload() },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_playlist_add),
+                            contentDescription = "Download",
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Download")
+                    }
+                }
+
+                else -> {
+                    Button(
+                        onClick = { viewModel.fetchManifest() },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text("Check download")
+                    }
+                }
+            }
+        }
+
+        item {
+            state.error?.let { error ->
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = error,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                )
             }
         }
     }
