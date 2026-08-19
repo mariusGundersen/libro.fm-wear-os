@@ -183,11 +183,8 @@ fun AudiobookInfo(book: Audiobook, coverLocalPath: String? = null) {
 
         Spacer(modifier = Modifier.height(4.dp))
 
-        val duration = book.durationSeconds
-        val hours = duration / 3600
-        val minutes = (duration % 3600) / 60
         Text(
-            text = "${hours}h ${minutes}m",
+            text = book.durationString,
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

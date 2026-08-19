@@ -147,6 +147,24 @@ private fun BookCard(
                 overflow = TextOverflow.Ellipsis,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            if (book.userMetadata != null) {
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = when {
+                        book.isFinished -> "Finished"
+                        book.isStarted -> "${book.listeningProgressPercent}% · ${book.remainingTimeString} remaining"
+                        else -> book.durationString
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    color = if (book.isFinished) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                )
+            }
         }
     }
 }
