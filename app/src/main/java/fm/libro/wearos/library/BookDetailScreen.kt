@@ -100,7 +100,7 @@ fun BookDetailScreen(
                         modifier = Modifier.fillMaxWidth(),
                     ) {
                         Icon(
-                            painter = painterResource(R.drawable.ic_playlist_add),
+                            painter = painterResource(R.drawable.ic_download),
                             contentDescription = "Download",
                         )
                         Spacer(modifier = Modifier.width(4.dp))
@@ -178,7 +178,7 @@ fun AudiobookInfo(book: Audiobook, coverLocalPath: String? = null) {
                 text = when {
                     book.isFinished -> "Finished"
                     book.isStarted -> "${book.listeningProgressPercent}% · ${book.remainingTimeString} remaining"
-                    else -> book.durationString
+                    else -> "Not started"
                 },
                 style = MaterialTheme.typography.bodySmall,
                 maxLines = 1,
