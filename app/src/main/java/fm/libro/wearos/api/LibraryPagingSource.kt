@@ -19,7 +19,7 @@ class LibraryPagingSource(
                     async {
                         try {
                             val manifest = LibroFmClient.getDownloadManifest(token, book.isbn)
-                            book.trackLengths = manifest.tracks.map { it.lengthSec }
+                            book.manifest = manifest
                         } catch (_: Exception) {
                         }
                         book

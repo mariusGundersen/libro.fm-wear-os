@@ -16,7 +16,7 @@ data class Audiobook(
     @SerializedName("user_metadata") val userMetadata: UserMetadata?,
 ) {
     @Transient
-    var trackLengths: List<Int>? = null
+    var manifest: DownloadManifest? = null
 
     val authorString: String
         get() = when (val a = authors) {
@@ -65,9 +65,9 @@ data class Audiobook(
         }
 
     private fun getListenedSeconds(trackIndex: Int, trackSeconds: Float): Float {
-        val lengths = trackLengths
-        return if (!lengths.isNullOrEmpty()) {
-            lengths.take(trackIndex).sum().toFloat() + trackSeconds
+        val tracks = manifest?.tracks
+        return if (!tracks.isNullOrEmpty()) {
+            tracks.take(trackIndex).sumOf { it.lengthSec }.toFloat() + trackSeconds
         } else {
             if (trackCount == 0) return 0f
             val avgTrackDuration = durationSeconds.toFloat() / trackCount

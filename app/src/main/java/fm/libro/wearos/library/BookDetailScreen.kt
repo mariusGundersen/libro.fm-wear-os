@@ -94,7 +94,7 @@ fun BookDetailScreen(
                     }
                 }
 
-                state.manifest != null -> {
+                state.book?.manifest != null -> {
                     Button(
                         onClick = { viewModel.startDownload() },
                         modifier = Modifier.fillMaxWidth(),
@@ -105,15 +105,6 @@ fun BookDetailScreen(
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text("Download")
-                    }
-                }
-
-                else -> {
-                    Button(
-                        onClick = { viewModel.fetchManifest() },
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Text("Check download")
                     }
                 }
             }
@@ -180,5 +171,25 @@ fun AudiobookInfo(book: Audiobook, coverLocalPath: String? = null) {
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+
+        if (book.userMetadata != null) {
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = when {
+                    book.isFinished -> "Finished"
+                    book.isStarted -> "${book.listeningProgressPercent}% · ${book.remainingTimeString} remaining"
+                    else -> book.durationString
+                },
+                style = MaterialTheme.typography.bodySmall,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                color = if (book.isFinished) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                },
+            )
+        }
+
     }
 }
