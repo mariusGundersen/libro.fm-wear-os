@@ -1,6 +1,7 @@
 package fm.libro.wearos.auth
 
 import android.app.Activity
+import android.app.RemoteInput
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -18,6 +19,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.material3.Button
 import androidx.wear.compose.material3.CircularProgressIndicator
 import androidx.wear.compose.material3.MaterialTheme
@@ -28,89 +30,99 @@ fun LoginScreen(
     viewModel: LoginViewModel,
     onLoginSuccess: () -> Unit,
 ) {
-    var email by remember { mutableStateOf(viewModel.email) }
-    var password by remember { mutableStateOf(viewModel.password) }
-
     val emailLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult(),
-    ) { result ->
-        if (result.resultCode == Activity.RESULT_OK) {
-            val text = result.data?.getStringExtra(TextInputActivity.EXTRA_RESULT) ?: ""
-            email = text
-            viewModel.email = text
+    ) {
+        it.data?.let { data ->
+            viewModel.email =
+                RemoteInput.getResultsFromIntent(data).getCharSequence("email").toString()
         }
     }
 
     val passwordLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult(),
-    ) { result ->
-        if (result.resultCode == Activity.RESULT_OK) {
-            val text = result.data?.getStringExtra(TextInputActivity.EXTRA_RESULT) ?: ""
-            password = text
-            viewModel.password = text
+    ) {
+        it.data?.let { data ->
+            viewModel.password =
+                RemoteInput.getResultsFromIntent(data).getCharSequence("password").toString()
         }
     }
 
-    Column(
+    ScalingLazyColumn (
         modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 16.dp),
+            .fillMaxSize(),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text(
-            text = "Libro.fm",
-            style = MaterialTheme.typography.titleMedium,
-        )
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        Button(
-            onClick = {
-                emailLauncher.launch(
-                    TextInputActivity.createIntent("Email", "email")
-                )
-            },
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Text(text = if (email.isNotBlank()) "Email: $email" else "Enter email")
+        item{
+            Text(
+                text = "Libro.fm",
+                style = MaterialTheme.typography.titleMedium,
+            )
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Button(
-            onClick = {
-                passwordLauncher.launch(
-                    TextInputActivity.createIntent("Password", "password")
-                )
-            },
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Text(text = if (password.isNotBlank()) "Password: ****" else "Enter password")
+        item {
+            Spacer(modifier = Modifier.height(12.dp))
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
-
-        if (viewModel.isLoading) {
-            CircularProgressIndicator(modifier = Modifier.height(36.dp))
-        } else {
+        item {
             Button(
                 onClick = {
-                    viewModel.login(onSuccess = onLoginSuccess)
+                    emailLauncher.launch(
+                        TextInputActivity.createIntent("Email", "email")
+                    )
                 },
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text("Log in")
+                Text(text = if (viewModel.email.isNotBlank()) "Email: $viewModel.email" else "Enter email")
             }
         }
 
-        viewModel.error?.let { errorMsg ->
+        item{
             Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = errorMsg,
-                color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodySmall,
-            )
+        }
+
+        item{
+            Button(
+                onClick = {
+                    passwordLauncher.launch(
+                        TextInputActivity.createIntent("Password", "password")
+                    )
+                },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(text = if (viewModel.password.isNotBlank()) "Password: ****" else "Enter password")
+            }
+        }
+
+        item{
+            Spacer(modifier = Modifier.height(12.dp))
+        }
+
+        item{
+            if (viewModel.isLoading) {
+                CircularProgressIndicator(modifier = Modifier.height(36.dp))
+            } else {
+                Button(
+                    onClick = {
+                        viewModel.login(onSuccess = onLoginSuccess)
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text("Log in")
+                }
+            }
+        }
+
+        item{
+            viewModel.error?.let { errorMsg ->
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = errorMsg,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
         }
     }
 }

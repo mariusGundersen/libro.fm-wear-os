@@ -26,6 +26,15 @@ class DownloadManager(private val context: Context) {
         val dir = context.filesDir.resolve("audiobooks").resolve(isbn)
         dir.mkdirs()
 
+        val coverFile = dir.resolve("cover.jpg")
+        if (book.coverUrl != null && !coverFile.exists()) {
+            try {
+                downloadFile("https:${book.coverUrl}", coverFile) {}
+            } catch (_: Exception) {
+            }
+        }
+        val coverLocalPath = if (coverFile.exists()) coverFile.absolutePath else null
+
         val isM4b = manifest.version == "m4b" && manifest.parts.isNotEmpty()
 
         if (isM4b) {
@@ -39,6 +48,7 @@ class DownloadManager(private val context: Context) {
                     title = book.title,
                     author = book.authorString,
                     coverUrl = book.coverUrl,
+                    coverLocalPath = coverLocalPath,
                     format = "m4b",
                     filePath = file.absolutePath,
                     fileSizeBytes = file.length(),
@@ -68,6 +78,7 @@ class DownloadManager(private val context: Context) {
                     title = book.title,
                     author = book.authorString,
                     coverUrl = book.coverUrl,
+                    coverLocalPath = coverLocalPath,
                     format = "mp3",
                     filePath = dir.absolutePath,
                     fileSizeBytes = totalSize,
@@ -83,11 +94,8 @@ class DownloadManager(private val context: Context) {
     suspend fun deleteBook(isbn: String) = withContext(Dispatchers.IO) {
         val entity = db.downloadedBookDao().getByIsbn(isbn) ?: return@withContext
         val file = File(entity.filePath)
-        if (file.isDirectory) {
-            file.deleteRecursively()
-        } else {
-            file.delete()
-        }
+        val dir = if (file.isDirectory) file else file.parentFile
+        dir?.deleteRecursively()
         db.downloadedBookDao().deleteByIsbn(isbn)
         db.playbackProgressDao().deleteByIsbn(isbn)
     }

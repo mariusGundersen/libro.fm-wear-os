@@ -9,6 +9,7 @@ data class DownloadedBookEntity(
     val title: String,
     val author: String,
     val coverUrl: String?,
+    val coverLocalPath: String?,
     val format: String, // "m4b" or "mp3"
     val filePath: String,
     val fileSizeBytes: Long,

@@ -10,8 +10,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -25,7 +23,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.material3.Button
-import androidx.wear.compose.material3.ButtonDefaults
 import androidx.wear.compose.material3.CircularProgressIndicator
 import androidx.wear.compose.material3.Icon
 import androidx.wear.compose.material3.MaterialTheme
@@ -34,7 +31,7 @@ import androidx.wear.compose.material3.Text
 import coil.compose.AsyncImage
 import fm.libro.wearos.R
 import fm.libro.wearos.api.models.Audiobook
-import org.intellij.lang.annotations.JdkConstants
+import java.io.File
 
 @Composable
 fun BookDetailScreen(
@@ -57,7 +54,7 @@ fun BookDetailScreen(
             else -> {
                 item {
                     state.book?.let { book ->
-                        AudiobookInfo(book)
+                        AudiobookInfo(book, state.coverLocalPath)
                     }
 
                 }
@@ -70,14 +67,11 @@ fun BookDetailScreen(
                     when {
                         state.isDownloading -> {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text(
-                                    text = "Downloading... ${state.downloadProgress}%",
-                                    style = MaterialTheme.typography.bodySmall,
-                                )
+                                CircularProgressIndicator(modifier = Modifier.size(48.dp))
                                 Spacer(modifier = Modifier.height(8.dp))
-                                CircularProgressIndicator(
-                                    progress = { state.downloadProgress / 100f },
-                                    modifier = Modifier.size(48.dp),
+                                Text(
+                                    text = "Downloading...",
+                                    style = MaterialTheme.typography.bodySmall,
                                 )
                             }
                         }
@@ -147,12 +141,14 @@ fun BookDetailScreen(
 }
 
 @Composable
-fun AudiobookInfo(book: Audiobook){
+fun AudiobookInfo(book: Audiobook, coverLocalPath: String? = null) {
     Column (
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        val coverModel: Any? = coverLocalPath?.let { File(it) }
+            ?: book.coverUrl?.let { "https:$it" }
         AsyncImage(
-            model = "https:${book.coverUrl}",
+            model = coverModel,
             contentDescription = book.title,
             modifier = Modifier
                 .fillMaxWidth()

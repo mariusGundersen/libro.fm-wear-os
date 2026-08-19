@@ -23,6 +23,7 @@ import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.Text
 import coil.compose.AsyncImage
 import fm.libro.wearos.data.DownloadedBookEntity
+import java.io.File
 
 @Composable
 fun DownloadedBooksScreen(
@@ -106,9 +107,11 @@ private fun DownloadedBookCard(
             .padding(0.dp),
         contentPadding = PaddingValues(0.dp),
     ) {
-        if (book.coverUrl != null) {
+        val coverModel: Any? = book.coverLocalPath?.let { File(it) }
+            ?: book.coverUrl?.let { "https:$it" }
+        if (coverModel != null) {
             AsyncImage(
-                model = "https:${book.coverUrl}",
+                model = coverModel,
                 contentDescription = book.title,
                 modifier = Modifier
                     .padding(0.dp)

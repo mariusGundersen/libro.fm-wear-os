@@ -28,6 +28,7 @@ import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.Text
 import coil.compose.AsyncImage
 import fm.libro.wearos.R
+import java.io.File
 
 @Composable
 fun PlayerScreen(viewModel: PlayerViewModel) {
@@ -51,8 +52,10 @@ fun PlayerScreen(viewModel: PlayerViewModel) {
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
+        val coverModel: Any? = state.coverLocalPath?.let { File(it) }
+            ?: state.coverUrl?.let { "https:$it" }
         AsyncImage(
-            model = state.coverUrl,
+            model = coverModel,
             contentDescription = state.title,
             modifier = Modifier
                 .size(64.dp)
