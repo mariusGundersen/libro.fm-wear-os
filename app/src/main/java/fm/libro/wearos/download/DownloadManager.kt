@@ -5,6 +5,8 @@ import fm.libro.wearos.api.models.Audiobook
 import fm.libro.wearos.api.models.DownloadManifest
 import fm.libro.wearos.data.AppDatabase
 import fm.libro.wearos.data.DownloadedBookEntity
+import fm.libro.wearos.data.StoredTrack
+import com.google.gson.Gson
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
@@ -16,6 +18,14 @@ class DownloadManager(private val context: Context) {
 
     private val db = AppDatabase.getInstance(context)
     private val client = OkHttpClient()
+    private val gson = Gson()
+
+    private fun tracksJson(manifest: DownloadManifest): String {
+        val stored = manifest.tracks.map {
+            StoredTrack(number = it.number, lengthSec = it.lengthSec, chapterTitle = it.chapterTitle)
+        }
+        return gson.toJson(stored)
+    }
 
     suspend fun downloadAudiobook(
         book: Audiobook,
@@ -54,7 +64,7 @@ class DownloadManager(private val context: Context) {
                     fileSizeBytes = file.length(),
                     durationSeconds = book.durationSeconds,
                     trackCount = manifest.tracks.size,
-                    tracksJson = "[]",
+                    tracksJson = tracksJson(manifest),
                     downloadedAt = System.currentTimeMillis(),
                 )
             )
@@ -84,7 +94,7 @@ class DownloadManager(private val context: Context) {
                     fileSizeBytes = totalSize,
                     durationSeconds = book.durationSeconds,
                     trackCount = mp3Files.size,
-                    tracksJson = "[]",
+                    tracksJson = tracksJson(manifest),
                     downloadedAt = System.currentTimeMillis(),
                 )
             )

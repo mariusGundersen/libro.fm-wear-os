@@ -5,8 +5,11 @@ import android.content.Intent
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import fm.libro.wearos.data.AppDatabase
 import fm.libro.wearos.data.PlaybackProgressEntity
+import fm.libro.wearos.data.StoredTrack
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -52,7 +55,9 @@ class PlayerViewModel(
             val book = db.downloadedBookDao().getByIsbn(isbn) ?: return@launch
             val progress = db.playbackProgressDao().getByIsbn(isbn)
 
-            val tracks = loadTracks(book.filePath, book.format)
+            val tracks = loadTracks(book.filePath, book.format, book.tracksJson)
+
+            val totalDurationMs = tracks.sumOf { it.durationMs }
 
             _uiState.value = PlayerUiState(
                 title = book.title,
@@ -61,24 +66,44 @@ class PlayerViewModel(
                 coverLocalPath = book.coverLocalPath,
                 isLoading = false,
                 tracks = tracks,
+                durationMs = totalDurationMs,
                 currentTrackIndex = progress?.trackIndex ?: 0,
                 currentPositionMs = progress?.positionMs ?: 0,
             )
         }
     }
 
-    private fun loadTracks(filePath: String, format: String): List<TrackInfo> {
+    private fun loadTracks(filePath: String, format: String, tracksJson: String): List<TrackInfo> {
+        val storedTracks: List<StoredTrack> = try {
+            val type = object : TypeToken<List<StoredTrack>>() {}.type
+            Gson().fromJson(tracksJson, type) ?: emptyList()
+        } catch (_: Exception) {
+            emptyList()
+        }
+
         val file = File(filePath)
         return when (format) {
             "m4b" -> {
-                listOf(TrackInfo(0, file.nameWithoutExtension, file.absolutePath, 0))
+                val track = storedTracks.firstOrNull()
+                listOf(TrackInfo(
+                    index = 0,
+                    title = track?.chapterTitle ?: file.nameWithoutExtension,
+                    filePath = file.absolutePath,
+                    durationMs = (track?.lengthSec ?: 0) * 1000L,
+                ))
             }
             "mp3" -> {
                 file.listFiles()
                     ?.filter { it.extension == "mp3" }
                     ?.sorted()
                     ?.mapIndexed { index, f ->
-                        TrackInfo(index, f.nameWithoutExtension, f.absolutePath, 0)
+                        val stored = storedTracks.getOrNull(index)
+                        TrackInfo(
+                            index = index,
+                            title = stored?.chapterTitle ?: f.nameWithoutExtension,
+                            filePath = f.absolutePath,
+                            durationMs = (stored?.lengthSec ?: 0) * 1000L,
+                        )
                     } ?: emptyList()
             }
             else -> emptyList()
