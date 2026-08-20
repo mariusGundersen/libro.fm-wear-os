@@ -69,19 +69,12 @@ class DownloadManager(private val context: Context) {
                 )
             )
         } else {
-            var previousProgress = -1.0f
             manifest.parts.forEachIndexed { index, part ->
-                val zipFile = dir.resolve("part_${index + 1}.zip")
-                downloadFile(part.url, zipFile) { partProgress ->
+                downloadAndExtractZip(part.url, dir) { partProgress ->
                     val totalProgress = ((index.toFloat() / manifest.parts.size) +
-                        (partProgress.toFloat() / manifest.parts.size / 100f)) * 100f
-                    if(totalProgress > previousProgress) {
-                        previousProgress = totalProgress
-                        onProgress(totalProgress.toInt())
-                    }
+                            (partProgress.toFloat() / manifest.parts.size / 100f)) * 100f
+                    onProgress(totalProgress.toInt())
                 }
-                extractZip(zipFile, dir)
-                zipFile.delete()
             }
             val mp3Files = dir.listFiles()?.filter { it.extension == "mp3" }?.sorted() ?: emptyList()
             val totalSize = mp3Files.sumOf { it.length() }
@@ -141,19 +134,71 @@ class DownloadManager(private val context: Context) {
         }
     }
 
-    private fun extractZip(zipFile: File, targetDir: File) {
-        ZipInputStream(zipFile.inputStream()).use { zip ->
-            var entry = zip.nextEntry
-            while (entry != null) {
-                if (!entry.isDirectory) {
-                    val outFile = targetDir.resolve(entry.name)
-                    outFile.parentFile?.mkdirs()
-                    outFile.outputStream().use { output ->
-                        zip.copyTo(output)
+    private fun downloadAndExtractZip(
+        url: String,
+        targetDir: File,
+        onProgress: (Int) -> Unit,
+    ) {
+        val request = Request.Builder().url(url).build()
+        val response = client.newCall(request).execute()
+        val body = response.body ?: throw Exception("Empty response")
+        val contentLength = body.contentLength()
+
+        body.byteStream().use { rawInput ->
+            val progressInput = ProgressInputStream(rawInput, contentLength, onProgress)
+            ZipInputStream(progressInput).use { zip ->
+                var entry = zip.nextEntry
+                while (entry != null) {
+                    if (!entry.isDirectory) {
+                        val outFile = targetDir.resolve(entry.name)
+                        outFile.parentFile?.mkdirs()
+                        outFile.outputStream().use { output ->
+                            zip.copyTo(output)
+                        }
                     }
+                    zip.closeEntry()
+                    entry = zip.nextEntry
                 }
-                zip.closeEntry()
-                entry = zip.nextEntry
+            }
+        }
+    }
+
+    private class ProgressInputStream(
+        private val delegate: java.io.InputStream,
+        private val totalBytes: Long,
+        private val onProgress: (Int) -> Unit,
+    ) : java.io.InputStream() {
+        private var bytesRead = 0L
+        private var lastReported = -1
+
+        override fun read(): Int {
+            val b = delegate.read()
+            if (b != -1) {
+                bytesRead++
+                reportProgress()
+            }
+            return b
+        }
+
+        override fun read(buffer: ByteArray, offset: Int, length: Int): Int {
+            val n = delegate.read(buffer, offset, length)
+            if (n > 0) {
+                bytesRead += n
+                reportProgress()
+            }
+            return n
+        }
+
+        override fun available() = delegate.available()
+        override fun close() = delegate.close()
+
+        private fun reportProgress() {
+            if (totalBytes > 0) {
+                val progress = (bytesRead * 100 / totalBytes).toInt()
+                if (progress > lastReported) {
+                    lastReported = progress
+                    onProgress(progress)
+                }
             }
         }
     }
