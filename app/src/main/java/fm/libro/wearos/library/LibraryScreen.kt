@@ -41,7 +41,7 @@ fun LibraryScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 CircularProgressIndicator()
-
+                Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = "Loading library",
                     style = MaterialTheme.typography.bodySmall,

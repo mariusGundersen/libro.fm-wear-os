@@ -69,12 +69,16 @@ class DownloadManager(private val context: Context) {
                 )
             )
         } else {
+            var previousProgress = -1.0f
             manifest.parts.forEachIndexed { index, part ->
                 val zipFile = dir.resolve("part_${index + 1}.zip")
                 downloadFile(part.url, zipFile) { partProgress ->
                     val totalProgress = ((index.toFloat() / manifest.parts.size) +
                         (partProgress.toFloat() / manifest.parts.size / 100f)) * 100f
-                    onProgress(totalProgress.toInt())
+                    if(totalProgress > previousProgress) {
+                        previousProgress = totalProgress
+                        onProgress(totalProgress.toInt())
+                    }
                 }
                 extractZip(zipFile, dir)
                 zipFile.delete()

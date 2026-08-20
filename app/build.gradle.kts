@@ -89,6 +89,9 @@ dependencies {
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
 
+    // WorkManager
+    implementation("androidx.work:work-runtime-ktx:2.10.1")
+
     // Core
     implementation("androidx.core:core-ktx:1.19.0")
 

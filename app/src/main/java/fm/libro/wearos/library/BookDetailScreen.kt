@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.material3.Button
 import androidx.wear.compose.material3.CircularProgressIndicator
+import androidx.wear.compose.material3.CircularProgressIndicatorDefaults
 import androidx.wear.compose.material3.Icon
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.OutlinedButton
@@ -61,10 +62,14 @@ fun BookDetailScreen(
             when {
                 state.isDownloading -> {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        CircularProgressIndicator(modifier = Modifier.size(48.dp))
+                        CircularProgressIndicator(
+                            progress = { state.downloadProgress / 100f },
+                            modifier = Modifier.size(48.dp),
+                            strokeWidth = CircularProgressIndicatorDefaults.smallStrokeWidth
+                        )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "Downloading...",
+                            text = "Downloading... ${state.downloadProgress}%",
                             style = MaterialTheme.typography.bodySmall,
                         )
                     }
@@ -97,7 +102,6 @@ fun BookDetailScreen(
                 state.book?.manifest != null -> {
                     Button(
                         onClick = { viewModel.startDownload() },
-                        modifier = Modifier.fillMaxWidth(),
                     ) {
                         Icon(
                             painter = painterResource(R.drawable.ic_download),
