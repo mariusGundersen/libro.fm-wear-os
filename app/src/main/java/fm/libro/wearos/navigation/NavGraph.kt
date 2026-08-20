@@ -18,8 +18,8 @@ import fm.libro.wearos.library.DownloadedBooksScreen
 import fm.libro.wearos.library.DownloadedBooksViewModel
 import fm.libro.wearos.library.LibraryScreen
 import fm.libro.wearos.library.LibraryViewModel
-import fm.libro.wearos.player.PlayerScreen
-import fm.libro.wearos.player.PlayerViewModel
+import fm.libro.wearos.player.LibroPlayerScreen
+import fm.libro.wearos.player.LibroPlayerViewModel
 import kotlin.getValue
 
 object Routes {
@@ -114,8 +114,8 @@ fun AppNavGraph(
             Routes.PLAYER,
             arguments = listOf(navArgument("isbn") { type = NavType.StringType }),
         ) {
-            val viewModel: PlayerViewModel = viewModel()
-            PlayerScreen(viewModel = viewModel)
+            val viewModel: LibroPlayerViewModel = viewModel()
+            LibroPlayerScreen(viewModel = viewModel)
         }
     }
 }

@@ -21,9 +21,9 @@ class DownloadManager(private val context: Context) {
     private val client = OkHttpClient()
     private val gson = Gson()
 
-    private fun tracksJson(manifest: DownloadManifest): String {
-        val stored = manifest.tracks.map {
-            StoredTrack(number = it.number, lengthSec = it.lengthSec, chapterTitle = it.chapterTitle)
+    private fun tracksJson(manifest: DownloadManifest, files: List<File>): String {
+        val stored = manifest.tracks.zip(files).map { (track, file) ->
+            StoredTrack(number = track.number, lengthSec = track.lengthSec, chapterTitle = track.chapterTitle, filePath = file.absolutePath)
         }
         return gson.toJson(stored)
     }
@@ -65,20 +65,19 @@ class DownloadManager(private val context: Context) {
                     fileSizeBytes = file.length(),
                     durationSeconds = book.durationSeconds,
                     trackCount = manifest.tracks.size,
-                    tracksJson = tracksJson(manifest),
+                    tracksJson = tracksJson(manifest, manifest.tracks.map{ _ -> file}),
                     downloadedAt = System.currentTimeMillis(),
                 )
             )
             saveProgress(book)
         } else {
-            manifest.parts.forEachIndexed { index, part ->
+            val mp3Files = manifest.parts.flatMapIndexed { index, part ->
                 downloadAndExtractZip(part.url, dir) { partProgress ->
                     val totalProgress = ((index.toFloat() / manifest.parts.size) +
                             (partProgress.toFloat() / manifest.parts.size / 100f)) * 100f
                     onProgress(totalProgress.toInt())
                 }
             }
-            val mp3Files = dir.listFiles()?.filter { it.extension == "mp3" }?.sorted() ?: emptyList()
             val totalSize = mp3Files.sumOf { it.length() }
 
             db.downloadedBookDao().insert(
@@ -93,7 +92,7 @@ class DownloadManager(private val context: Context) {
                     fileSizeBytes = totalSize,
                     durationSeconds = book.durationSeconds,
                     trackCount = mp3Files.size,
-                    tracksJson = tracksJson(manifest),
+                    tracksJson = tracksJson(manifest, mp3Files),
                     downloadedAt = System.currentTimeMillis(),
                 )
             )
@@ -157,11 +156,12 @@ class DownloadManager(private val context: Context) {
         url: String,
         targetDir: File,
         onProgress: (Int) -> Unit,
-    ) {
+    ): List<File> {
         val request = Request.Builder().url(url).build()
         val response = client.newCall(request).execute()
         val body = response.body ?: throw Exception("Empty response")
         val contentLength = body.contentLength()
+        val entries = ArrayList<File>();
 
         body.byteStream().use { rawInput ->
             val progressInput = ProgressInputStream(rawInput, contentLength, onProgress)
@@ -174,12 +174,15 @@ class DownloadManager(private val context: Context) {
                         outFile.outputStream().use { output ->
                             zip.copyTo(output)
                         }
+                        entries.add(outFile)
                     }
                     zip.closeEntry()
                     entry = zip.nextEntry
                 }
             }
         }
+
+        return entries
     }
 
     private class ProgressInputStream(

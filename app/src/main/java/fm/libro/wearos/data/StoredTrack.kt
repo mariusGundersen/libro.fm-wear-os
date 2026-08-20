@@ -4,4 +4,5 @@ data class StoredTrack(
     val number: Int,
     val lengthSec: Int,
     val chapterTitle: String?,
+    val filePath: String
 )

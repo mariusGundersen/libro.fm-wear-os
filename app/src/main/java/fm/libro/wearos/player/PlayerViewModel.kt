@@ -1,79 +1,122 @@
 package fm.libro.wearos.player
 
 import android.app.Application
+import android.content.ComponentName
+import android.content.Context
 import android.content.Intent
+import android.content.ServiceConnection
+import android.os.IBinder
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
+import androidx.media3.common.AudioAttributes
+import androidx.media3.common.C
+import androidx.media3.exoplayer.ExoPlayer
+import com.google.android.horologist.annotations.ExperimentalHorologistApi
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import com.google.android.horologist.media.model.Media
+import com.google.android.horologist.media.ui.state.PlayerUiController
+import com.google.android.horologist.media.ui.state.PlayerUiState
+import com.google.android.horologist.media.ui.state.PlayerUiStateProducer
 import fm.libro.wearos.data.AppDatabase
 import fm.libro.wearos.data.PlaybackProgressEntity
 import fm.libro.wearos.data.StoredTrack
-import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.io.File
 
-data class PlayerUiState(
-    val title: String = "",
-    val author: String = "",
-    val coverUrl: String? = null,
-    val coverLocalPath: String? = null,
-    val isPlaying: Boolean = false,
-    val currentPositionMs: Long = 0,
-    val durationMs: Long = 0,
-    val isLoading: Boolean = true,
-    val tracks: List<TrackInfo> = emptyList(),
-    val currentTrackIndex: Int = 0,
-)
-
-data class TrackInfo(
-    val index: Int,
-    val title: String,
-    val filePath: String,
-    val durationMs: Long,
-)
-
-class PlayerViewModel(
+@OptIn(ExperimentalHorologistApi::class)
+class LibroPlayerViewModel(
     application: Application,
     savedStateHandle: SavedStateHandle,
 ) : AndroidViewModel(application) {
 
     private val isbn: String = savedStateHandle["isbn"] ?: ""
     private val db = AppDatabase.getInstance(application)
-    private val _uiState = MutableStateFlow(PlayerUiState())
-    val uiState: StateFlow<PlayerUiState> = _uiState.asStateFlow()
+
+    private val exoPlayer = ExoPlayer.Builder(application)
+        .setAudioAttributes(
+            AudioAttributes.Builder()
+                .setContentType(C.AUDIO_CONTENT_TYPE_SPEECH)
+                .setUsage(C.USAGE_MEDIA)
+                .build(),
+            true,
+        )
+        .setHandleAudioBecomingNoisy(true)
+        .setWakeMode(C.WAKE_MODE_NETWORK)
+        .build()
+
+    val playerRepository = PlayerRepositoryImpl(exoPlayer)
+
+    private val producer = PlayerUiStateProducer(playerRepository)
+    val playerUiState: StateFlow<PlayerUiState> =
+        producer.playerUiStateFlow.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
+            initialValue = PlayerUiState.NotConnected,
+        )
+
+    val playerUiController = PlayerUiController(playerRepository)
+
+    private var service: PlaybackService? = null
+    private var bound = false
+
+    private val connection = object : ServiceConnection {
+        override fun onServiceConnected(name: ComponentName, binder: IBinder) {
+            val localBinder = binder as PlaybackService.LocalBinder
+            service = localBinder.getService()
+            bound = true
+            service?.attachPlayer(exoPlayer)
+            service?.startForegroundNotification()
+            viewModelScope.launch {
+                playerRepository.connect()
+                loadBook()
+            }
+        }
+
+        override fun onServiceDisconnected(name: ComponentName) {
+            service = null
+            bound = false
+        }
+    }
 
     init {
-        loadBook()
+        val intent = Intent(application, PlaybackService::class.java)
+        application.bindService(intent, connection, Context.BIND_AUTO_CREATE)
     }
 
     private fun loadBook() {
         viewModelScope.launch {
             val book = db.downloadedBookDao().getByIsbn(isbn) ?: return@launch
             val progress = db.playbackProgressDao().getByIsbn(isbn)
-
             val tracks = loadTracks(book.filePath, book.format, book.tracksJson)
 
-            val totalDurationMs = tracks.sumOf { it.durationMs }
+            if (tracks.isEmpty()) return@launch
 
-            _uiState.value = PlayerUiState(
-                title = book.title,
-                author = book.author,
-                coverUrl = book.coverUrl,
-                coverLocalPath = book.coverLocalPath,
-                isLoading = false,
-                tracks = tracks,
-                durationMs = totalDurationMs,
-                currentTrackIndex = progress?.trackIndex ?: 0,
-                currentPositionMs = progress?.positionMs ?: 0,
-            )
+            val mediaList = tracks.map { track ->
+                Media(
+                    id = "${book.isbn}_${track.number}",
+                    uri = "file://${track.filePath}",
+                    title = track.chapterTitle ?: "Track ${track.number}",
+                    artist = book.author,
+                    artworkUri = book.coverLocalPath?.let { "file://$it" },
+                )
+            }
+
+            val startIndex = progress?.trackIndex?.coerceIn(0, mediaList.size - 1) ?: 0
+
+            playerRepository.setMediaList(mediaList, startIndex)
+
+            if (progress != null && progress.positionMs > 0) {
+                exoPlayer.seekTo(progress.positionMs)
+            }
         }
     }
 
-    private fun loadTracks(filePath: String, format: String, tracksJson: String): List<TrackInfo> {
+    private fun loadTracks(filePath: String, format: String, tracksJson: String): List<StoredTrack> {
         val storedTracks: List<StoredTrack> = try {
             val type = object : TypeToken<List<StoredTrack>>() {}.type
             Gson().fromJson(tracksJson, type) ?: emptyList()
@@ -83,14 +126,8 @@ class PlayerViewModel(
 
         val file = File(filePath)
         return when (format) {
-            "m4b" -> {
-                val track = storedTracks.firstOrNull()
-                listOf(TrackInfo(
-                    index = 0,
-                    title = track?.chapterTitle ?: file.nameWithoutExtension,
-                    filePath = file.absolutePath,
-                    durationMs = (track?.lengthSec ?: 0) * 1000L,
-                ))
+            "m4b" -> storedTracks.ifEmpty {
+                listOf(StoredTrack(number = 1, lengthSec = 0, chapterTitle = file.nameWithoutExtension, filePath))
             }
             "mp3" -> {
                 file.listFiles()
@@ -98,11 +135,11 @@ class PlayerViewModel(
                     ?.sorted()
                     ?.mapIndexed { index, f ->
                         val stored = storedTracks.getOrNull(index)
-                        TrackInfo(
-                            index = index,
-                            title = stored?.chapterTitle ?: f.nameWithoutExtension,
-                            filePath = f.absolutePath,
-                            durationMs = (stored?.lengthSec ?: 0) * 1000L,
+                        StoredTrack(
+                            number = index + 1,
+                            lengthSec = stored?.lengthSec ?: 0,
+                            chapterTitle = stored?.chapterTitle ?: f.nameWithoutExtension,
+                            filePath = stored?.filePath ?: f.absolutePath
                         )
                     } ?: emptyList()
             }
@@ -110,73 +147,17 @@ class PlayerViewModel(
         }
     }
 
-    fun play() {
-        startPlaybackService(play = true)
-        _uiState.value = _uiState.value.copy(isPlaying = true)
-    }
-
-    fun pause() {
-        startPlaybackService(play = false)
-        _uiState.value = _uiState.value.copy(isPlaying = false)
-    }
-
-    fun seekTo(positionMs: Long) {
-        _uiState.value = _uiState.value.copy(currentPositionMs = positionMs)
-    }
-
-    fun skipForward() {
-        val newPos = _uiState.value.currentPositionMs + 30_000
-        seekTo(minOf(newPos, _uiState.value.durationMs))
-    }
-
-    fun skipBackward() {
-        val newPos = _uiState.value.currentPositionMs - 30_000
-        seekTo(maxOf(newPos, 0))
-    }
-
-    fun nextTrack() {
-        val state = _uiState.value
-        if (state.currentTrackIndex < state.tracks.size - 1) {
-            _uiState.value = state.copy(
-                currentTrackIndex = state.currentTrackIndex + 1,
-                currentPositionMs = 0,
-            )
-        }
-    }
-
-    fun previousTrack() {
-        val state = _uiState.value
-        if (state.currentTrackIndex > 0) {
-            _uiState.value = state.copy(
-                currentTrackIndex = state.currentTrackIndex - 1,
-                currentPositionMs = 0,
-            )
-        }
-    }
-
-    private fun startPlaybackService(play: Boolean) {
-        val context = getApplication<Application>()
-        val state = _uiState.value
-        val track = state.tracks.getOrNull(state.currentTrackIndex) ?: return
-
-        val intent = Intent(context, PlaybackService::class.java).apply {
-            action = if (play) PlaybackService.ACTION_PLAY else PlaybackService.ACTION_PAUSE
-            putExtra(PlaybackService.EXTRA_FILE_PATH, track.filePath)
-            putExtra(PlaybackService.EXTRA_POSITION_MS, state.currentPositionMs)
-            putExtra(PlaybackService.EXTRA_ISBN, isbn)
-        }
-        context.startForegroundService(intent)
-    }
-
     fun saveProgress() {
         viewModelScope.launch {
-            val state = _uiState.value
+            val mediaIndex = playerRepository.getCurrentMediaIndex()
+            val positionMs = exoPlayer.currentPosition.coerceAtLeast(0)
+
             db.playbackProgressDao().upsert(
                 PlaybackProgressEntity(
                     isbn = isbn,
-                    trackIndex = state.currentTrackIndex,
-                    positionMs = state.currentPositionMs,
-                    playbackSpeed = 1.0f,
+                    trackIndex = mediaIndex,
+                    positionMs = positionMs,
+                    playbackSpeed = exoPlayer.playbackParameters.speed,
                     updatedAt = System.currentTimeMillis(),
                 )
             )
@@ -186,5 +167,13 @@ class PlayerViewModel(
     override fun onCleared() {
         super.onCleared()
         saveProgress()
+        playerRepository.disconnect()
+        exoPlayer.release()
+        if (bound) {
+            getApplication<Application>().unbindService(connection)
+            bound = false
+        }
+        service?.stopForegroundNotification()
+        service = null
     }
 }
