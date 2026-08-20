@@ -96,7 +96,7 @@ class BookDetailViewModel(
         val book = _uiState.value.book ?: return
         val manifest = book.manifest ?: return
 
-        val inputData = AudiobookDownloadWorker.createInputData(book, manifest)
+        val inputData = AudiobookDownloadWorker.createInputData(isbn, manifest)
         val request = OneTimeWorkRequestBuilder<AudiobookDownloadWorker>()
             .setInputData(inputData)
             .build()
@@ -125,5 +125,7 @@ class BookDetailViewModel(
         fun cacheBook(book: Audiobook) {
             bookCache[book.isbn] = book
         }
+
+        fun getCachedBook(isbn: String): Audiobook? = bookCache[isbn]
     }
 }

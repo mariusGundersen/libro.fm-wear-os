@@ -5,6 +5,7 @@ import fm.libro.wearos.api.models.Audiobook
 import fm.libro.wearos.api.models.DownloadManifest
 import fm.libro.wearos.data.AppDatabase
 import fm.libro.wearos.data.DownloadedBookEntity
+import fm.libro.wearos.data.PlaybackProgressEntity
 import fm.libro.wearos.data.StoredTrack
 import com.google.gson.Gson
 import kotlinx.coroutines.Dispatchers
@@ -68,6 +69,7 @@ class DownloadManager(private val context: Context) {
                     downloadedAt = System.currentTimeMillis(),
                 )
             )
+            saveProgress(book)
         } else {
             manifest.parts.forEachIndexed { index, part ->
                 downloadAndExtractZip(part.url, dir) { partProgress ->
@@ -95,6 +97,7 @@ class DownloadManager(private val context: Context) {
                     downloadedAt = System.currentTimeMillis(),
                 )
             )
+            saveProgress(book)
         }
     }
 
@@ -105,6 +108,22 @@ class DownloadManager(private val context: Context) {
         dir?.deleteRecursively()
         db.downloadedBookDao().deleteByIsbn(isbn)
         db.playbackProgressDao().deleteByIsbn(isbn)
+    }
+
+    private suspend fun saveProgress(book: Audiobook) {
+        val meta = book.userMetadata ?: return
+        val trackIndex = meta.trackIndex ?: return
+        val trackSeconds = meta.trackSeconds ?: return
+        if (trackIndex == 0 && trackSeconds == 0f) return
+        db.playbackProgressDao().upsert(
+            PlaybackProgressEntity(
+                isbn = book.isbn,
+                trackIndex = trackIndex,
+                positionMs = (trackSeconds * 1000).toLong(),
+                playbackSpeed = 1.0f,
+                updatedAt = System.currentTimeMillis(),
+            )
+        )
     }
 
     private fun downloadFile(
