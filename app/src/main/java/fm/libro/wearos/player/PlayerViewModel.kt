@@ -27,6 +27,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.io.File
+import kotlin.time.Duration.Companion.milliseconds
 
 @OptIn(ExperimentalHorologistApi::class)
 class LibroPlayerViewModel(
@@ -108,11 +109,7 @@ class LibroPlayerViewModel(
 
             val startIndex = progress?.trackIndex?.coerceIn(0, mediaList.size - 1) ?: 0
 
-            playerRepository.setMediaList(mediaList, startIndex)
-
-            if (progress != null && progress.positionMs > 0) {
-                exoPlayer.seekTo(progress.positionMs)
-            }
+            playerRepository.setMediaList(mediaList, startIndex, progress?.positionMs?.milliseconds)
         }
     }
 
