@@ -13,6 +13,7 @@ import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.ui.WearUnsuitableOutputPlaybackSuppressionResolverListener
 import com.google.android.horologist.annotations.ExperimentalHorologistApi
 import com.google.android.horologist.media.data.repository.PlayerRepositoryImpl
 import com.google.gson.Gson
@@ -52,7 +53,9 @@ class LibroPlayerViewModel(
         //.setSuppressPlaybackOnUnsuitableOutput(true)
         .setHandleAudioBecomingNoisy(true)
         .setWakeMode(C.WAKE_MODE_NETWORK)
-        .build()
+        .build().apply {
+            addListener(WearUnsuitableOutputPlaybackSuppressionResolverListener(application))
+        }
 
     val playerRepository = PlayerRepositoryImpl()
 
