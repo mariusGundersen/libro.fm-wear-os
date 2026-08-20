@@ -11,8 +11,10 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import com.google.android.horologist.annotations.ExperimentalHorologistApi
+import com.google.android.horologist.media.data.repository.PlayerRepositoryImpl
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.google.android.horologist.media.model.Media
@@ -29,6 +31,7 @@ import kotlinx.coroutines.launch
 import java.io.File
 import kotlin.time.Duration.Companion.milliseconds
 
+@UnstableApi
 @OptIn(ExperimentalHorologistApi::class)
 class LibroPlayerViewModel(
     application: Application,
@@ -46,11 +49,12 @@ class LibroPlayerViewModel(
                 .build(),
             true,
         )
+        //.setSuppressPlaybackOnUnsuitableOutput(true)
         .setHandleAudioBecomingNoisy(true)
         .setWakeMode(C.WAKE_MODE_NETWORK)
         .build()
 
-    val playerRepository = PlayerRepositoryImpl(exoPlayer)
+    val playerRepository = PlayerRepositoryImpl()
 
     private val producer = PlayerUiStateProducer(playerRepository)
     val playerUiState: StateFlow<PlayerUiState> =
@@ -62,31 +66,10 @@ class LibroPlayerViewModel(
 
     val playerUiController = PlayerUiController(playerRepository)
 
-    private var service: PlaybackService? = null
-    private var bound = false
-
-    private val connection = object : ServiceConnection {
-        override fun onServiceConnected(name: ComponentName, binder: IBinder) {
-            val localBinder = binder as PlaybackService.LocalBinder
-            service = localBinder.getService()
-            bound = true
-            service?.attachPlayer(exoPlayer)
-            service?.startForegroundNotification()
-            viewModelScope.launch {
-                playerRepository.connect()
-                loadBook()
-            }
-        }
-
-        override fun onServiceDisconnected(name: ComponentName) {
-            service = null
-            bound = false
-        }
-    }
 
     init {
-        val intent = Intent(application, PlaybackService::class.java)
-        application.bindService(intent, connection, Context.BIND_AUTO_CREATE)
+        playerRepository.connect(exoPlayer) { saveProgress() }
+        loadBook()
     }
 
     private fun loadBook() {
@@ -159,18 +142,5 @@ class LibroPlayerViewModel(
                 )
             )
         }
-    }
-
-    override fun onCleared() {
-        super.onCleared()
-        saveProgress()
-        playerRepository.disconnect()
-        exoPlayer.release()
-        if (bound) {
-            getApplication<Application>().unbindService(connection)
-            bound = false
-        }
-        service?.stopForegroundNotification()
-        service = null
     }
 }
