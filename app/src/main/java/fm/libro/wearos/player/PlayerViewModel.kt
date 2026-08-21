@@ -25,6 +25,7 @@ import com.google.android.horologist.media.ui.state.PlayerUiStateProducer
 import fm.libro.wearos.data.AppDatabase
 import fm.libro.wearos.data.PlaybackProgressEntity
 import fm.libro.wearos.data.StoredTrack
+import fm.libro.wearos.download.DownloadManager
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
@@ -41,6 +42,7 @@ class LibroPlayerViewModel(
 
     private val isbn: String = savedStateHandle["isbn"] ?: ""
     private val db = AppDatabase.getInstance(application)
+    private val downloadManager = DownloadManager(application)
 
     private val exoPlayer = ExoPlayer.Builder(application)
         .setAudioAttributes(
@@ -144,6 +146,12 @@ class LibroPlayerViewModel(
                     updatedAt = System.currentTimeMillis(),
                 )
             )
+        }
+    }
+
+    fun deleteBook(){
+        viewModelScope.launch {
+            downloadManager.deleteBook(isbn)
         }
     }
 }

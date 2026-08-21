@@ -1,7 +1,9 @@
 package fm.libro.wearos.navigation
 
+import androidx.annotation.OptIn
 import androidx.compose.runtime.Composable
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.media3.common.util.UnstableApi
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
 import androidx.wear.compose.navigation.SwipeDismissableNavHost
@@ -35,6 +37,7 @@ object Routes {
     fun player(isbn: String) = "player/$isbn"
 }
 
+@OptIn(UnstableApi::class)
 @Composable
 fun AppNavGraph(
     authManager: AuthManager,
@@ -63,7 +66,7 @@ fun AppNavGraph(
             DownloadedBooksScreen(
                 viewModel = viewModel,
                 onBookClick = { isbn ->
-                    navController.navigate(Routes.downloadedBookDetail(isbn))
+                    navController.navigate(Routes.player(isbn))
                 },
                 onBrowseLibrary = {
                     navController.navigate(Routes.LIBRARY)
@@ -115,7 +118,10 @@ fun AppNavGraph(
             arguments = listOf(navArgument("isbn") { type = NavType.StringType }),
         ) {
             val viewModel: LibroPlayerViewModel = viewModel()
-            LibroPlayerScreen(viewModel = viewModel)
+            LibroPlayerScreen(
+                viewModel = viewModel,
+                onBack = { navController.popBackStack() }
+            )
         }
     }
 }
