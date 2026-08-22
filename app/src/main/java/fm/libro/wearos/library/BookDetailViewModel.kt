@@ -1,13 +1,16 @@
 package fm.libro.wearos.library
 
 import android.app.Application
-import androidx.lifecycle.AndroidViewModel
+import android.content.Context
 import androidx.lifecycle.SavedStateHandle
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
+import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import fm.libro.wearos.api.models.Audiobook
 import fm.libro.wearos.data.AppDatabase
 import fm.libro.wearos.download.AudiobookDownloadWorker
@@ -16,6 +19,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
 data class BookDetailUiState(
     val book: Audiobook? = null,
@@ -26,15 +30,18 @@ data class BookDetailUiState(
     val error: String? = null,
 )
 
-class BookDetailViewModel(
-    application: Application,
-    savedStateHandle: SavedStateHandle,
-) : AndroidViewModel(application) {
+@HiltViewModel
+class BookDetailViewModel
+    @Inject
+    constructor(
+        @ApplicationContext private val context: Context,
+        private val db: AppDatabase,
+        savedStateHandle: SavedStateHandle,
+    ) : ViewModel() {
 
     private val isbn: String = savedStateHandle["isbn"] ?: ""
-    private val db = AppDatabase.getInstance(application)
-    private val downloadManager = DownloadManager(application)
-    private val workManager = WorkManager.getInstance(application)
+    private val downloadManager = DownloadManager(context.applicationContext as Application)
+    private val workManager = WorkManager.getInstance(context)
 
     private val _uiState = MutableStateFlow(BookDetailUiState())
     val uiState: StateFlow<BookDetailUiState> = _uiState.asStateFlow()

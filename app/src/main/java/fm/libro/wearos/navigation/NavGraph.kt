@@ -1,9 +1,7 @@
 package fm.libro.wearos.navigation
 
-import androidx.annotation.OptIn
 import androidx.compose.runtime.Composable
-import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.media3.common.util.UnstableApi
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
 import androidx.wear.compose.navigation.SwipeDismissableNavHost
@@ -22,7 +20,6 @@ import fm.libro.wearos.library.LibraryScreen
 import fm.libro.wearos.library.LibraryViewModel
 import fm.libro.wearos.player.LibroPlayerScreen
 import fm.libro.wearos.player.LibroPlayerViewModel
-import kotlin.getValue
 
 object Routes {
     const val LOGIN = "login"
@@ -37,7 +34,6 @@ object Routes {
     fun player(isbn: String) = "player/$isbn"
 }
 
-@OptIn(UnstableApi::class)
 @Composable
 fun AppNavGraph(
     authManager: AuthManager,
@@ -50,7 +46,7 @@ fun AppNavGraph(
         startDestination = if (authManager.isLoggedIn) Routes.DOWNLOADED else Routes.LOGIN,
     ) {
         composable(Routes.LOGIN) {
-            val viewModel: LoginViewModel = viewModel()
+            val viewModel: LoginViewModel = hiltViewModel()
             LoginScreen(
                 viewModel = viewModel,
                 onLoginSuccess = {
@@ -62,11 +58,11 @@ fun AppNavGraph(
         }
 
         composable(Routes.DOWNLOADED) {
-            val viewModel: DownloadedBooksViewModel = viewModel()
+            val viewModel: DownloadedBooksViewModel = hiltViewModel()
             DownloadedBooksScreen(
                 viewModel = viewModel,
                 onBookClick = { isbn ->
-                    navController.navigate(Routes.player(isbn))
+                    navController.navigate(Routes.downloadedBookDetail(isbn))
                 },
                 onBrowseLibrary = {
                     navController.navigate(Routes.LIBRARY)
@@ -75,7 +71,7 @@ fun AppNavGraph(
         }
 
         composable(Routes.LIBRARY) {
-            val viewModel: LibraryViewModel = viewModel()
+            val viewModel: LibraryViewModel = hiltViewModel()
             LibraryScreen(
                 viewModel = viewModel,
                 onBookClick = { isbn, book ->
@@ -89,7 +85,7 @@ fun AppNavGraph(
             Routes.BOOK_DETAIL,
             arguments = listOf(navArgument("isbn") { type = NavType.StringType }),
         ) {
-            val viewModel: BookDetailViewModel = viewModel()
+            val viewModel: BookDetailViewModel = hiltViewModel()
             BookDetailScreen(
                 viewModel = viewModel,
                 onPlay = { isbn ->
@@ -103,7 +99,7 @@ fun AppNavGraph(
             Routes.DOWNLOADED_BOOK_DETAIL,
             arguments = listOf(navArgument("isbn") { type = NavType.StringType }),
         ) {
-            val viewModel: DownloadedBookDetailViewModel = viewModel()
+            val viewModel: DownloadedBookDetailViewModel = hiltViewModel()
             DownloadedBookDetailScreen(
                 viewModel = viewModel,
                 onPlay = { isbn ->
@@ -117,11 +113,8 @@ fun AppNavGraph(
             Routes.PLAYER,
             arguments = listOf(navArgument("isbn") { type = NavType.StringType }),
         ) {
-            val viewModel: LibroPlayerViewModel = viewModel()
-            LibroPlayerScreen(
-                viewModel = viewModel,
-                onBack = { navController.popBackStack() }
-            )
+            val viewModel: LibroPlayerViewModel = hiltViewModel()
+            LibroPlayerScreen(viewModel = viewModel)
         }
     }
 }

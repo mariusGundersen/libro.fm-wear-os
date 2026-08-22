@@ -1,157 +1,18 @@
 package fm.libro.wearos.player
 
-import android.app.Application
-import android.content.ComponentName
-import android.content.Context
-import android.content.Intent
-import android.content.ServiceConnection
-import android.os.IBinder
-import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
-import androidx.media3.common.AudioAttributes
-import androidx.media3.common.C
-import androidx.media3.common.util.UnstableApi
-import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.ui.WearUnsuitableOutputPlaybackSuppressionResolverListener
-import com.google.android.horologist.annotations.ExperimentalHorologistApi
 import com.google.android.horologist.media.data.repository.PlayerRepositoryImpl
-import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
-import com.google.android.horologist.media.model.Media
-import com.google.android.horologist.media.ui.state.PlayerUiController
-import com.google.android.horologist.media.ui.state.PlayerUiState
-import com.google.android.horologist.media.ui.state.PlayerUiStateProducer
-import fm.libro.wearos.data.AppDatabase
-import fm.libro.wearos.data.PlaybackProgressEntity
-import fm.libro.wearos.data.StoredTrack
-import fm.libro.wearos.download.DownloadManager
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.stateIn
+import com.google.android.horologist.media.ui.state.PlayerViewModel
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
-import java.io.File
-import kotlin.time.Duration.Companion.milliseconds
+import javax.inject.Inject
 
-@UnstableApi
-@OptIn(ExperimentalHorologistApi::class)
-class LibroPlayerViewModel(
-    application: Application,
-    savedStateHandle: SavedStateHandle,
-) : AndroidViewModel(application) {
+@HiltViewModel
+class LibroPlayerViewModel
+    @Inject
+    constructor(
+        playerRepository: PlayerRepositoryImpl,
+    ) : PlayerViewModel(playerRepository) {
 
-    private val isbn: String = savedStateHandle["isbn"] ?: ""
-    private val db = AppDatabase.getInstance(application)
-    private val downloadManager = DownloadManager(application)
-
-    private val exoPlayer = ExoPlayer.Builder(application)
-        .setAudioAttributes(
-            AudioAttributes.Builder()
-                .setContentType(C.AUDIO_CONTENT_TYPE_SPEECH)
-                .setUsage(C.USAGE_MEDIA)
-                .build(),
-            true,
-        )
-        //.setSuppressPlaybackOnUnsuitableOutput(true)
-        .setHandleAudioBecomingNoisy(true)
-        .setWakeMode(C.WAKE_MODE_NETWORK)
-        .build().apply {
-            addListener(WearUnsuitableOutputPlaybackSuppressionResolverListener(application))
-        }
-
-    val playerRepository = PlayerRepositoryImpl()
-
-    private val producer = PlayerUiStateProducer(playerRepository)
-    val playerUiState: StateFlow<PlayerUiState> =
-        producer.playerUiStateFlow.stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
-            initialValue = PlayerUiState.NotConnected,
-        )
-
-    val playerUiController = PlayerUiController(playerRepository)
-
-
-    init {
-        playerRepository.connect(exoPlayer) { saveProgress() }
-        loadBook()
-    }
-
-    private fun loadBook() {
-        viewModelScope.launch {
-            val book = db.downloadedBookDao().getByIsbn(isbn) ?: return@launch
-            val progress = db.playbackProgressDao().getByIsbn(isbn)
-            val tracks = loadTracks(book.filePath, book.format, book.tracksJson)
-
-            if (tracks.isEmpty()) return@launch
-
-            val mediaList = tracks.map { track ->
-                Media(
-                    id = "${book.isbn}_${track.number}",
-                    uri = "file://${track.filePath}",
-                    title = track.chapterTitle ?: "Track ${track.number}",
-                    artist = book.author,
-                    artworkUri = book.coverLocalPath?.let { "file://$it" },
-                )
-            }
-
-            val startIndex = progress?.trackIndex?.coerceIn(0, mediaList.size - 1) ?: 0
-
-            playerRepository.setMediaList(mediaList, startIndex, progress?.positionMs?.milliseconds)
-        }
-    }
-
-    private fun loadTracks(filePath: String, format: String, tracksJson: String): List<StoredTrack> {
-        val storedTracks: List<StoredTrack> = try {
-            val type = object : TypeToken<List<StoredTrack>>() {}.type
-            Gson().fromJson(tracksJson, type) ?: emptyList()
-        } catch (_: Exception) {
-            emptyList()
-        }
-
-        val file = File(filePath)
-        return when (format) {
-            "m4b" -> storedTracks.ifEmpty {
-                listOf(StoredTrack(number = 1, lengthSec = 0, chapterTitle = file.nameWithoutExtension, filePath))
-            }
-            "mp3" -> {
-                file.listFiles()
-                    ?.filter { it.extension == "mp3" }
-                    ?.sorted()
-                    ?.mapIndexed { index, f ->
-                        val stored = storedTracks.getOrNull(index)
-                        StoredTrack(
-                            number = index + 1,
-                            lengthSec = stored?.lengthSec ?: 0,
-                            chapterTitle = stored?.chapterTitle ?: f.nameWithoutExtension,
-                            filePath = stored?.filePath ?: f.absolutePath
-                        )
-                    } ?: emptyList()
-            }
-            else -> emptyList()
-        }
-    }
-
-    fun saveProgress() {
-        viewModelScope.launch {
-            val mediaIndex = playerRepository.getCurrentMediaIndex()
-            val positionMs = exoPlayer.currentPosition.coerceAtLeast(0)
-
-            db.playbackProgressDao().upsert(
-                PlaybackProgressEntity(
-                    isbn = isbn,
-                    trackIndex = mediaIndex,
-                    positionMs = positionMs,
-                    playbackSpeed = exoPlayer.playbackParameters.speed,
-                    updatedAt = System.currentTimeMillis(),
-                )
-            )
-        }
-    }
-
-    fun deleteBook(){
-        viewModelScope.launch {
-            downloadManager.deleteBook(isbn)
-        }
-    }
+    val playerState = playerRepository.player
 }

@@ -1,9 +1,12 @@
 package fm.libro.wearos.library
 
 import android.app.Application
-import androidx.lifecycle.AndroidViewModel
+import android.content.Context
 import androidx.lifecycle.SavedStateHandle
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import fm.libro.wearos.api.models.Audiobook
 import fm.libro.wearos.api.models.AudiobookInfo
 import fm.libro.wearos.data.AppDatabase
@@ -13,6 +16,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
 data class DownloadedBookDetailUiState(
     val book: Audiobook? = null,
@@ -20,14 +24,17 @@ data class DownloadedBookDetailUiState(
     val error: String? = null,
 )
 
-class DownloadedBookDetailViewModel(
-    application: Application,
-    savedStateHandle: SavedStateHandle,
-) : AndroidViewModel(application) {
+@HiltViewModel
+class DownloadedBookDetailViewModel
+    @Inject
+    constructor(
+        @ApplicationContext private val context: Context,
+        private val db: AppDatabase,
+        savedStateHandle: SavedStateHandle,
+    ) : ViewModel() {
 
     private val isbn: String = savedStateHandle["isbn"] ?: ""
-    private val db = AppDatabase.getInstance(application)
-    private val downloadManager = DownloadManager(application)
+    private val downloadManager = DownloadManager(context.applicationContext as Application)
 
     private val _uiState = MutableStateFlow(DownloadedBookDetailUiState())
     val uiState: StateFlow<DownloadedBookDetailUiState> = _uiState.asStateFlow()

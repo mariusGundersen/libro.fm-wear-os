@@ -1,17 +1,24 @@
 package fm.libro.wearos.auth
 
-import android.app.Application
+import android.content.Context
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import fm.libro.wearos.api.LibroFmClient
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
-class LoginViewModel(application: Application) : AndroidViewModel(application) {
-
-    private val authManager = AuthManager(application)
+@HiltViewModel
+class LoginViewModel
+    @Inject
+    constructor(
+        @ApplicationContext private val context: Context,
+        private val authManager: AuthManager,
+    ) : ViewModel() {
 
     var email by mutableStateOf("")
     var password by mutableStateOf("")
