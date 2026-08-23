@@ -7,18 +7,19 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 
 class LibraryPagingSource(
+    private val api: LibroFmApi,
     private val token: String,
 ) : PagingSource<Int, Audiobook>() {
 
     override suspend fun load(params: LoadParams<Int>): LoadResult<Int, Audiobook> {
         val page = params.key ?: 1
         return try {
-            val response = LibroFmClient.getLibrary(token, page)
+            val response = api.getLibrary(auth = "Bearer $token", page = page)
             val books = coroutineScope {
                 response.audiobooks.map { book ->
                     async {
                         try {
-                            val manifest = LibroFmClient.getDownloadManifest(token, book.isbn)
+                            val manifest = api.getDownloadManifest(auth = "Bearer $token", isbn = book.isbn)
                             book.manifest = manifest
                         } catch (_: Exception) {
                         }

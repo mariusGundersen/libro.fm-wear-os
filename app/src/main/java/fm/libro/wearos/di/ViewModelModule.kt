@@ -9,6 +9,7 @@ import com.google.android.horologist.media.data.mapper.MediaExtrasMapperNoopImpl
 import com.google.android.horologist.media.data.mapper.MediaItemExtrasMapperNoopImpl
 import com.google.android.horologist.media.data.mapper.MediaItemMapper
 import com.google.android.horologist.media.data.mapper.MediaMapper
+import com.google.android.horologist.media.data.mapper.PlaybackStateMapper
 import com.google.android.horologist.media.data.repository.PlayerRepositoryImpl
 import com.google.android.horologist.media.repository.PlayerRepository
 import com.google.android.horologist.media3.flows.buildSuspend
@@ -67,6 +68,7 @@ object ViewModelModule {
     fun playerRepositoryImpl(
         mediaMapper: MediaMapper,
         mediaItemMapper: MediaItemMapper,
+        playbackStateMapper: PlaybackStateMapper,
         activityRetainedLifecycle: ActivityRetainedLifecycle,
         coroutineScope: CoroutineScope,
         mediaBrowser: Deferred<MediaBrowser>,
@@ -74,6 +76,7 @@ object ViewModelModule {
         PlayerRepositoryImpl(
             mediaMapper = mediaMapper,
             mediaItemMapper = mediaItemMapper,
+            playbackStateMapper = playbackStateMapper,
         ).also { playerRepository ->
             activityRetainedLifecycle.addOnClearedListener {
                 playerRepository.close()
@@ -100,4 +103,7 @@ object ViewModelModule {
     @OptIn(ExperimentalHorologistApi::class)
     @Provides
     fun mediaMapper(): MediaMapper = MediaMapper(MediaExtrasMapperNoopImpl)
+
+    @Provides
+    fun playbackStateMapper(): PlaybackStateMapper = PlaybackStateMapper()
 }

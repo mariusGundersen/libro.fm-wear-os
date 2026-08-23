@@ -20,6 +20,8 @@ import fm.libro.wearos.library.LibraryScreen
 import fm.libro.wearos.library.LibraryViewModel
 import fm.libro.wearos.player.LibroPlayerScreen
 import fm.libro.wearos.player.LibroPlayerViewModel
+import fm.libro.wearos.settings.SettingsScreen
+import fm.libro.wearos.settings.SettingsViewModel
 
 object Routes {
     const val LOGIN = "login"
@@ -28,6 +30,7 @@ object Routes {
     const val BOOK_DETAIL = "book/{isbn}"
     const val DOWNLOADED_BOOK_DETAIL = "downloaded_book/{isbn}"
     const val PLAYER = "player/{isbn}"
+    const val SETTINGS = "settings"
 
     fun bookDetail(isbn: String) = "book/$isbn"
     fun downloadedBookDetail(isbn: String) = "downloaded_book/$isbn"
@@ -88,7 +91,7 @@ fun AppNavGraph(
             val viewModel: BookDetailViewModel = hiltViewModel()
             BookDetailScreen(
                 viewModel = viewModel,
-                onPlay = { isbn ->
+                onPlay = { isbn, startIndex ->
                     navController.navigate(Routes.player(isbn))
                 },
                 onBack = { navController.popBackStack() },
@@ -112,9 +115,18 @@ fun AppNavGraph(
         composable(
             Routes.PLAYER,
             arguments = listOf(navArgument("isbn") { type = NavType.StringType }),
-        ) {
+        ) { backStackEntry ->
+            val isbn = backStackEntry.arguments?.getString("isbn") ?: return@composable
             val viewModel: LibroPlayerViewModel = hiltViewModel()
-            LibroPlayerScreen(viewModel = viewModel)
+            LibroPlayerScreen(
+                viewModel = viewModel,
+                isbn = isbn,
+            )
+        }
+
+        composable(Routes.SETTINGS) {
+            val viewModel: SettingsViewModel = hiltViewModel()
+            SettingsScreen(viewModel = viewModel)
         }
     }
 }

@@ -70,6 +70,12 @@ class DownloadedBookDetailViewModel
         }
     }
 
+    fun cacheAndPlay(onPlay: (String) -> Unit) {
+        val book = _uiState.value.book ?: return
+        BookDetailViewModel.cacheBook(book)
+        onPlay(book.isbn)
+    }
+
     private fun DownloadedBookEntity.toAudiobook(): Audiobook {
         return Audiobook(
             isbn = isbn,

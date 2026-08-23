@@ -96,6 +96,11 @@ object PlaybackServiceModule {
         @ApplicationContext context: Context,
     ): MediaSource.Factory = DefaultMediaSourceFactory(context)
 
+    @SuppressSpeakerPlayback
+    @ServiceScoped
+    @Provides
+    fun suppressSpeakerPlayback(): Boolean = true
+
     @ServiceScoped
     @Provides
     fun exoPlayer(
@@ -104,6 +109,7 @@ object PlaybackServiceModule {
         audioOnlyRenderersFactory: RenderersFactory,
         analyticsCollector: AnalyticsCollector,
         mediaSourceFactory: MediaSource.Factory,
+        @SuppressSpeakerPlayback suppressSpeakerPlayback: Boolean,
     ): Player = ExoPlayer.Builder(service, audioOnlyRenderersFactory)
         .setAnalyticsCollector(analyticsCollector)
         .setMediaSourceFactory(mediaSourceFactory)
@@ -112,6 +118,7 @@ object PlaybackServiceModule {
         .setLoadControl(loadControl)
         .setSeekForwardIncrementMs(10_000)
         .setSeekBackIncrementMs(10_000)
+        .setSuppressPlaybackOnUnsuitableOutput(suppressSpeakerPlayback)
         .build().apply {
             addListener(analyticsCollector)
             addListener(WearUnsuitableOutputPlaybackSuppressionResolverListener(service))
@@ -135,8 +142,11 @@ object PlaybackServiceModule {
 
     @ServiceScoped
     @Provides
-    fun librarySessionCallback(): MediaLibraryService.MediaLibrarySession.Callback =
-        LibroMediaLibrarySessionCallback()
+    fun librarySessionCallback(
+        serviceCoroutineScope: CoroutineScope,
+        logger: ErrorReporter,
+    ): MediaLibraryService.MediaLibrarySession.Callback =
+        LibroMediaLibrarySessionCallback(serviceCoroutineScope, logger)
 
     @ServiceScoped
     @Provides

@@ -1,14 +1,12 @@
 package fm.libro.wearos.auth
 
-import android.content.Context
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.qualifiers.ApplicationContext
-import fm.libro.wearos.api.LibroFmClient
+import fm.libro.wearos.api.LibroFmApi
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -16,8 +14,8 @@ import javax.inject.Inject
 class LoginViewModel
     @Inject
     constructor(
-        @ApplicationContext private val context: Context,
         private val authManager: AuthManager,
+        private val api: LibroFmApi,
     ) : ViewModel() {
 
     var email by mutableStateOf("")
@@ -38,7 +36,7 @@ class LoginViewModel
 
         viewModelScope.launch {
             try {
-                val response = LibroFmClient.login(email, password)
+                val response = api.login(username = email, password = password)
                 authManager.saveLogin(
                     token = response.accessToken,
                     createdAt = response.createdAt,

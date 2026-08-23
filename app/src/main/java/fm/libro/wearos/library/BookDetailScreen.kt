@@ -37,7 +37,7 @@ import java.io.File
 @Composable
 fun BookDetailScreen(
     viewModel: BookDetailViewModel,
-    onPlay: (String) -> Unit,
+    onPlay: (String, Int) -> Unit,
     onBack: () -> Unit,
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -80,7 +80,7 @@ fun BookDetailScreen(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         Button(
-                            onClick = { onPlay(state.book?.isbn ?: "") },
+                            onClick = { onPlay(state.book?.isbn ?: "", 0) },
                             modifier = Modifier.weight(1f),
                         ) {
                             Icon(
