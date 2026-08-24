@@ -36,29 +36,28 @@ class BookDetailViewModel
     constructor(
         @ApplicationContext private val context: Context,
         private val db: AppDatabase,
+        private val workManager: WorkManager,
         savedStateHandle: SavedStateHandle,
     ) : ViewModel() {
 
     private val isbn: String = savedStateHandle["isbn"] ?: ""
     private val downloadManager = DownloadManager(context.applicationContext as Application)
-    private val workManager = WorkManager.getInstance(context)
 
     private val _uiState = MutableStateFlow(BookDetailUiState())
     val uiState: StateFlow<BookDetailUiState> = _uiState.asStateFlow()
 
     init {
         _uiState.value = _uiState.value.copy(book = bookCache.remove(isbn))
-        observeDownload()
+        observeDownloadedStatus()
         observeWorkManager()
     }
 
-    private fun observeDownload() {
+    private fun observeDownloadedStatus() {
         viewModelScope.launch {
             db.downloadedBookDao().getByIsbnFlow(isbn).collect { entity ->
                 _uiState.value = _uiState.value.copy(
                     isDownloaded = entity != null,
                     coverLocalPath = entity?.coverLocalPath,
-                    isDownloading = false,
                 )
             }
         }
@@ -69,6 +68,12 @@ class BookDetailViewModel
             workManager.getWorkInfosForUniqueWorkFlow(workName).collect { workInfos ->
                 val workInfo = workInfos.firstOrNull() ?: return@collect
                 when (workInfo.state) {
+                    WorkInfo.State.ENQUEUED, WorkInfo.State.BLOCKED -> {
+                        _uiState.value = _uiState.value.copy(
+                            isDownloading = true,
+                            error = null,
+                        )
+                    }
                     WorkInfo.State.RUNNING -> {
                         val progress = workInfo.progress.getInt(
                             AudiobookDownloadWorker.KEY_PROGRESS, 0
@@ -76,6 +81,7 @@ class BookDetailViewModel
                         _uiState.value = _uiState.value.copy(
                             isDownloading = true,
                             downloadProgress = progress,
+                            error = null,
                         )
                     }
                     WorkInfo.State.SUCCEEDED -> {
@@ -93,7 +99,12 @@ class BookDetailViewModel
                             error = error ?: "Download failed",
                         )
                     }
-                    else -> {}
+                    WorkInfo.State.CANCELLED -> {
+                        _uiState.value = _uiState.value.copy(
+                            isDownloading = false,
+                            error = "Download cancelled",
+                        )
+                    }
                 }
             }
         }
@@ -103,6 +114,8 @@ class BookDetailViewModel
         val book = _uiState.value.book ?: return
         val manifest = book.manifest ?: return
 
+        cacheBook(book)
+
         val inputData = AudiobookDownloadWorker.createInputData(isbn, manifest)
         val request = OneTimeWorkRequestBuilder<AudiobookDownloadWorker>()
             .setInputData(inputData)
@@ -110,11 +123,15 @@ class BookDetailViewModel
 
         workManager.beginUniqueWork(
             workName,
-            ExistingWorkPolicy.KEEP,
+            ExistingWorkPolicy.REPLACE,
             request,
         ).enqueue()
 
-        _uiState.value = _uiState.value.copy(isDownloading = true, downloadProgress = 0)
+        _uiState.value = _uiState.value.copy(
+            isDownloading = true,
+            downloadProgress = 0,
+            error = null,
+        )
     }
 
     fun deleteBook() {

@@ -5,18 +5,24 @@ import android.app.NotificationManager
 import android.content.Context
 import android.content.pm.ServiceInfo
 import androidx.core.app.NotificationCompat
+import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.Data
 import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
 import com.google.gson.Gson
+import dagger.assisted.Assisted
+import dagger.assisted.AssistedInject
 import fm.libro.wearos.api.models.DownloadManifest
 import fm.libro.wearos.library.BookDetailViewModel
 
-class AudiobookDownloadWorker(
-    appContext: Context,
-    params: WorkerParameters,
-) : CoroutineWorker(appContext, params) {
+@HiltWorker
+class AudiobookDownloadWorker
+    @AssistedInject
+    constructor(
+        @Assisted appContext: Context,
+        @Assisted params: WorkerParameters,
+    ) : CoroutineWorker(appContext, params) {
 
     override suspend fun doWork(): Result {
         val isbn = inputData.getString(KEY_ISBN) ?: return Result.failure()

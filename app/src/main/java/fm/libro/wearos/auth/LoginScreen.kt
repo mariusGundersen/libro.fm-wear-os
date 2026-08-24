@@ -74,7 +74,7 @@ fun LoginScreen(
                 },
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text(text = if (viewModel.email.isNotBlank()) "Email: $viewModel.email" else "Enter email")
+                Text(text = if (viewModel.email.isNotBlank()) "Email: ${viewModel.email}" else "Enter email")
             }
         }
 

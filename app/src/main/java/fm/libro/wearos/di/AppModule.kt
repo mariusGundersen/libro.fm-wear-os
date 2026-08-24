@@ -1,6 +1,7 @@
 package fm.libro.wearos.di
 
 import android.content.Context
+import androidx.work.WorkManager
 import coil.ImageLoader
 import coil.disk.DiskCache
 import coil.request.CachePolicy
@@ -15,6 +16,12 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 object AppModule {
+
+    @Provides
+    @Singleton
+    fun workManager(
+        @ApplicationContext context: Context,
+    ): WorkManager = WorkManager.getInstance(context)
 
     @Provides
     @Singleton
