@@ -28,10 +28,13 @@ import androidx.media3.session.MediaLibraryService.MediaLibrarySession
 import androidx.media3.ui.WearUnsuitableOutputPlaybackSuppressionResolverListener
 import com.google.android.horologist.media3.config.WearMedia3Factory
 import com.google.android.horologist.media3.logging.AnalyticsEventLogger
+import android.os.Build
+import androidx.media3.exoplayer.ExoPlayer.AudioOffloadListener
 import com.google.android.horologist.media3.logging.ErrorReporter
 import com.google.android.horologist.media3.logging.TransferListener
 import com.google.android.horologist.media3.navigation.IntentBuilder
 import com.google.android.horologist.media3.tracing.TracingListener
+import fm.libro.wearos.offload.AudioOffloadManager
 import fm.libro.wearos.player.LibroMediaLibrarySessionCallback
 import dagger.Module
 import dagger.Provides
@@ -40,6 +43,7 @@ import dagger.hilt.android.components.ServiceComponent
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.android.scopes.ServiceScoped
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 
 @SuppressLint("UnsafeOptInUsageError")
 @Module
@@ -110,6 +114,8 @@ object PlaybackServiceModule {
         analyticsCollector: AnalyticsCollector,
         mediaSourceFactory: MediaSource.Factory,
         @SuppressSpeakerPlayback suppressSpeakerPlayback: Boolean,
+        audioOffloadManager: AudioOffloadManager,
+        serviceCoroutineScope: CoroutineScope,
     ): Player = ExoPlayer.Builder(service, audioOnlyRenderersFactory)
         .setAnalyticsCollector(analyticsCollector)
         .setMediaSourceFactory(mediaSourceFactory)
@@ -132,6 +138,11 @@ object PlaybackServiceModule {
                         .build(),
                 )
                 .build()
+            if (Build.VERSION.SDK_INT >= 30) {
+                serviceCoroutineScope.launch {
+                    audioOffloadManager.connect(this@apply)
+                }
+            }
         }
 
     @ServiceScoped
@@ -176,9 +187,10 @@ object PlaybackServiceModule {
     @Provides
     fun audioSink(
         wearMedia3Factory: WearMedia3Factory,
+        audioOffloadListener: AudioOffloadListener,
         service: Service,
     ): DefaultAudioSink = wearMedia3Factory.audioSink(
-        audioOffloadListener = null,
+        audioOffloadListener = audioOffloadListener,
     ).also { audioSink ->
         if (service is LifecycleOwner) {
             service.lifecycle.addObserver(
