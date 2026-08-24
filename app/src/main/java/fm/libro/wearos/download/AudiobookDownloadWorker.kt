@@ -13,8 +13,9 @@ import androidx.work.WorkerParameters
 import com.google.gson.Gson
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import fm.libro.wearos.api.models.Audiobook
+import fm.libro.wearos.api.models.AudiobookInfo
 import fm.libro.wearos.api.models.DownloadManifest
-import fm.libro.wearos.library.BookDetailViewModel
 
 @HiltWorker
 class AudiobookDownloadWorker
@@ -27,6 +28,10 @@ class AudiobookDownloadWorker
     override suspend fun doWork(): Result {
         val isbn = inputData.getString(KEY_ISBN) ?: return Result.failure()
         val manifestJson = inputData.getString(KEY_MANIFEST_JSON) ?: return Result.failure()
+        val title = inputData.getString(KEY_TITLE) ?: return Result.failure()
+        val author = inputData.getString(KEY_AUTHOR) ?: return Result.failure()
+        val coverUrl = inputData.getString(KEY_COVER_URL)
+        val durationSeconds = inputData.getInt(KEY_DURATION_SECONDS, 0)
 
         val manifest = try {
             Gson().fromJson(manifestJson, DownloadManifest::class.java)
@@ -34,8 +39,26 @@ class AudiobookDownloadWorker
             return Result.failure()
         }
 
-        val book = BookDetailViewModel.getCachedBook(isbn)
-            ?: return Result.failure()
+        val book = Audiobook(
+            isbn = isbn,
+            title = title,
+            authors = author,
+            coverUrl = coverUrl,
+            audiobookInfo = AudiobookInfo(
+                narrators = null,
+                duration = durationSeconds,
+                sizeBytes = null,
+                trackCount = manifest.tracks.size,
+                partsCount = null,
+                audioLanguage = null,
+            ),
+            series = null,
+            seriesNum = null,
+            publisher = null,
+            publicationDate = null,
+            description = null,
+            userMetadata = null,
+        )
         book.manifest = manifest
 
         createNotificationChannel()
@@ -84,6 +107,10 @@ class AudiobookDownloadWorker
     companion object {
         const val KEY_ISBN = "isbn"
         const val KEY_MANIFEST_JSON = "manifest_json"
+        const val KEY_TITLE = "title"
+        const val KEY_AUTHOR = "author"
+        const val KEY_COVER_URL = "cover_url"
+        const val KEY_DURATION_SECONDS = "duration_seconds"
         const val KEY_PROGRESS = "progress"
         const val KEY_ERROR = "error"
         const val CHANNEL_ID = "audiobook_downloads"
@@ -93,10 +120,18 @@ class AudiobookDownloadWorker
         fun createInputData(
             isbn: String,
             manifest: DownloadManifest,
+            title: String,
+            author: String,
+            coverUrl: String?,
+            durationSeconds: Int,
         ): Data {
             return Data.Builder()
                 .putString(KEY_ISBN, isbn)
                 .putString(KEY_MANIFEST_JSON, Gson().toJson(manifest))
+                .putString(KEY_TITLE, title)
+                .putString(KEY_AUTHOR, author)
+                .putString(KEY_COVER_URL, coverUrl)
+                .putInt(KEY_DURATION_SECONDS, durationSeconds)
                 .build()
         }
     }

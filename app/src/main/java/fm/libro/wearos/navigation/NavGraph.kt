@@ -4,129 +4,95 @@ import androidx.compose.runtime.Composable
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
-import androidx.wear.compose.navigation.SwipeDismissableNavHost
 import androidx.wear.compose.navigation.composable
-import androidx.wear.compose.navigation.rememberSwipeDismissableNavController
+import com.google.android.horologist.media.ui.navigation.MediaNavController.navigateToPlayer
+import com.google.android.horologist.media.ui.navigation.MediaPlayerScaffold
+import com.google.android.horologist.media.ui.navigation.NavigationScreen
 import fm.libro.wearos.auth.AuthManager
 import fm.libro.wearos.auth.LoginScreen
 import fm.libro.wearos.auth.LoginViewModel
 import fm.libro.wearos.library.BookDetailScreen
 import fm.libro.wearos.library.BookDetailViewModel
-import fm.libro.wearos.library.DownloadedBookDetailScreen
-import fm.libro.wearos.library.DownloadedBookDetailViewModel
-import fm.libro.wearos.library.DownloadedBooksScreen
 import fm.libro.wearos.library.DownloadedBooksViewModel
+import fm.libro.wearos.library.LibroBrowseScreen
 import fm.libro.wearos.library.LibraryScreen
 import fm.libro.wearos.library.LibraryViewModel
-import fm.libro.wearos.player.LibroPlayerScreen
+import fm.libro.wearos.player.LibroMediaPlayerScreen
 import fm.libro.wearos.player.LibroPlayerViewModel
+import fm.libro.wearos.player.LibroSnackbarViewModel
+import fm.libro.wearos.player.LibroVolumeViewModel
 import fm.libro.wearos.settings.SettingsScreen
 import fm.libro.wearos.settings.SettingsViewModel
 
 object Routes {
     const val LOGIN = "login"
-    const val DOWNLOADED = "downloaded"
-    const val LIBRARY = "library"
     const val BOOK_DETAIL = "book/{isbn}"
-    const val DOWNLOADED_BOOK_DETAIL = "downloaded_book/{isbn}"
-    const val PLAYER = "player/{isbn}"
-    const val SETTINGS = "settings"
 
     fun bookDetail(isbn: String) = "book/$isbn"
-    fun downloadedBookDetail(isbn: String) = "downloaded_book/$isbn"
-    fun player(isbn: String) = "player/$isbn"
 }
 
 @Composable
 fun AppNavGraph(
     authManager: AuthManager,
-    onLogout: () -> Unit,
+    navController: androidx.navigation.NavHostController,
+    volumeViewModel: LibroVolumeViewModel,
 ) {
-    val navController = rememberSwipeDismissableNavController()
+    val snackbarViewModel: LibroSnackbarViewModel = hiltViewModel()
 
-    SwipeDismissableNavHost(
-        navController = navController,
-        startDestination = if (authManager.isLoggedIn) Routes.DOWNLOADED else Routes.LOGIN,
-    ) {
-        composable(Routes.LOGIN) {
-            val viewModel: LoginViewModel = hiltViewModel()
-            LoginScreen(
-                viewModel = viewModel,
-                onLoginSuccess = {
-                    navController.navigate(Routes.DOWNLOADED) {
-                        popUpTo(Routes.LOGIN) { inclusive = true }
-                    }
-                },
+    MediaPlayerScaffold(
+        snackbarViewModel = snackbarViewModel,
+        volumeViewModel = volumeViewModel,
+        playerScreen = {
+            val playerViewModel: LibroPlayerViewModel = hiltViewModel()
+            LibroMediaPlayerScreen(
+                viewModel = playerViewModel,
             )
-        }
-
-        composable(Routes.DOWNLOADED) {
-            val viewModel: DownloadedBooksViewModel = hiltViewModel()
-            DownloadedBooksScreen(
-                viewModel = viewModel,
+        },
+        libraryScreen = {
+            val downloadedBooksViewModel: DownloadedBooksViewModel = hiltViewModel()
+            LibroBrowseScreen(
+                viewModel = downloadedBooksViewModel,
                 onBookClick = { isbn ->
-                    navController.navigate(Routes.downloadedBookDetail(isbn))
-                },
-                onBrowseLibrary = {
-                    navController.navigate(Routes.LIBRARY)
-                },
-            )
-        }
-
-        composable(Routes.LIBRARY) {
-            val viewModel: LibraryViewModel = hiltViewModel()
-            LibraryScreen(
-                viewModel = viewModel,
-                onBookClick = { isbn, book ->
-                    BookDetailViewModel.cacheBook(book)
                     navController.navigate(Routes.bookDetail(isbn))
                 },
-            )
-        }
-
-        composable(
-            Routes.BOOK_DETAIL,
-            arguments = listOf(navArgument("isbn") { type = NavType.StringType }),
-        ) {
-            val viewModel: BookDetailViewModel = hiltViewModel()
-            BookDetailScreen(
-                viewModel = viewModel,
-                onPlay = { isbn, startIndex ->
-                    navController.navigate(Routes.player(isbn))
+                onSettingsClick = {
+                    navController.navigate(NavigationScreen.Settings)
                 },
-                onBack = { navController.popBackStack() },
             )
-        }
-
-        composable(
-            Routes.DOWNLOADED_BOOK_DETAIL,
-            arguments = listOf(navArgument("isbn") { type = NavType.StringType }),
-        ) {
-            val viewModel: DownloadedBookDetailViewModel = hiltViewModel()
-            DownloadedBookDetailScreen(
-                viewModel = viewModel,
-                onPlay = { isbn ->
-                    navController.navigate(Routes.player(isbn))
-                },
-                onBack = { navController.popBackStack() },
-            )
-        }
-
-        composable(
-            Routes.PLAYER,
-            arguments = listOf(navArgument("isbn") { type = NavType.StringType }),
-        ) { backStackEntry ->
-            val isbn = backStackEntry.arguments?.getString("isbn") ?: return@composable
-            val viewModel: LibroPlayerViewModel = hiltViewModel()
-            LibroPlayerScreen(
-                viewModel = viewModel,
-                isbn = isbn,
-            )
-        }
-
-        composable(Routes.SETTINGS) {
+        },
+        categoryEntityScreen = { },
+        mediaEntityScreen = { },
+        playlistsScreen = { },
+        settingsScreen = {
             val viewModel: SettingsViewModel = hiltViewModel()
             SettingsScreen(viewModel = viewModel)
-        }
-    }
+        },
+        deepLinkPrefix = "librofm",
+        navController = navController,
+        additionalNavRoutes = {
+            if (!authManager.isLoggedIn) {
+                composable(Routes.LOGIN) {
+                    val viewModel: LoginViewModel = hiltViewModel()
+                    LoginScreen(
+                        viewModel = viewModel,
+                        onLoginSuccess = {
+                            navController.popBackStack()
+                        },
+                    )
+                }
+            }
+
+            composable(
+                Routes.BOOK_DETAIL,
+                arguments = listOf(navArgument("isbn") { type = NavType.StringType }),
+            ) {
+                val viewModel: BookDetailViewModel = hiltViewModel()
+                BookDetailScreen(
+                    viewModel = viewModel,
+                    onPlay = { navController.navigateToPlayer() },
+                    onBack = { navController.popBackStack() },
+                )
+            }
+        },
+    )
 }

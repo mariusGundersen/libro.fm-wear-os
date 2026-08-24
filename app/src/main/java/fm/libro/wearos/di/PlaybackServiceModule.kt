@@ -103,7 +103,9 @@ object PlaybackServiceModule {
     @SuppressSpeakerPlayback
     @ServiceScoped
     @Provides
-    fun suppressSpeakerPlayback(): Boolean = true
+    fun suppressSpeakerPlayback(
+        @IsEmulator isEmulator: Boolean,
+    ) = !isEmulator
 
     @ServiceScoped
     @Provides
