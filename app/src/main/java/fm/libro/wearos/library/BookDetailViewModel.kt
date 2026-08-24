@@ -46,6 +46,7 @@ class BookDetailViewModel
         private val db: AppDatabase,
         private val workManager: WorkManager,
         private val playerRepository: PlayerRepositoryImpl,
+        private val bookStore: BookStore,
         savedStateHandle: SavedStateHandle,
     ) : ViewModel() {
 
@@ -57,6 +58,9 @@ class BookDetailViewModel
     val uiState: StateFlow<BookDetailUiState> = _uiState.asStateFlow()
 
     init {
+        bookStore.get(isbn)?.let { book ->
+            _uiState.value = _uiState.value.copy(book = book)
+        }
         observeDownloadedStatus()
         observeWorkManager()
     }
@@ -200,7 +204,8 @@ class BookDetailViewModel
     private val workName: String
         get() = "${AudiobookDownloadWorker.WORK_NAME_PREFIX}$isbn"
 
-    private fun DownloadedBookEntity.toAudiobook(): Audiobook {
+    private suspend fun DownloadedBookEntity.toAudiobook(): Audiobook {
+        val progress = db.playbackProgressDao().getByIsbn(isbn)
         return Audiobook(
             isbn = isbn,
             title = title,
@@ -219,7 +224,16 @@ class BookDetailViewModel
             publisher = null,
             publicationDate = null,
             description = null,
-            userMetadata = null,
+            userMetadata = if (progress != null) {
+                fm.libro.wearos.api.models.UserMetadata(
+                    trackIndex = progress.trackIndex,
+                    trackSeconds = progress.positionMs / 1000f,
+                    finished = false,
+                    addedAt = null,
+                )
+            } else {
+                null
+            },
         )
     }
 }

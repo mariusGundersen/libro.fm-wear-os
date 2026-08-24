@@ -26,7 +26,7 @@ import java.io.File
 fun LibroBrowseScreen(
     viewModel: DownloadedBooksViewModel,
     onBookClick: (String) -> Unit,
-    onSettingsClick: () -> Unit,
+    onBrowseAllClick: () -> Unit,
 ) {
     val books by viewModel.downloadedBooks.collectAsState()
 
@@ -63,13 +63,13 @@ fun LibroBrowseScreen(
 
         item {
             Card(
-                onClick = onSettingsClick,
+                onClick = onBrowseAllClick,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 8.dp),
             ) {
                 Text(
-                    text = "Settings",
+                    text = "Browse All Books",
                     style = MaterialTheme.typography.bodyLarge,
                     modifier = Modifier.padding(12.dp),
                 )

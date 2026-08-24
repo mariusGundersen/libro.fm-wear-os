@@ -13,6 +13,7 @@ import fm.libro.wearos.auth.LoginScreen
 import fm.libro.wearos.auth.LoginViewModel
 import fm.libro.wearos.library.BookDetailScreen
 import fm.libro.wearos.library.BookDetailViewModel
+import fm.libro.wearos.library.BookStore
 import fm.libro.wearos.library.DownloadedBooksViewModel
 import fm.libro.wearos.library.LibroBrowseScreen
 import fm.libro.wearos.library.LibraryScreen
@@ -26,6 +27,7 @@ import fm.libro.wearos.settings.SettingsViewModel
 
 object Routes {
     const val LOGIN = "login"
+    const val LIBRARY = "library"
     const val BOOK_DETAIL = "book/{isbn}"
 
     fun bookDetail(isbn: String) = "book/$isbn"
@@ -34,6 +36,7 @@ object Routes {
 @Composable
 fun AppNavGraph(
     authManager: AuthManager,
+    bookStore: BookStore,
     navController: androidx.navigation.NavHostController,
     volumeViewModel: LibroVolumeViewModel,
 ) {
@@ -55,8 +58,8 @@ fun AppNavGraph(
                 onBookClick = { isbn ->
                     navController.navigate(Routes.bookDetail(isbn))
                 },
-                onSettingsClick = {
-                    navController.navigate(NavigationScreen.Settings)
+                onBrowseAllClick = {
+                    navController.navigate(Routes.LIBRARY)
                 },
             )
         },
@@ -91,6 +94,17 @@ fun AppNavGraph(
                     viewModel = viewModel,
                     onPlay = { navController.navigateToPlayer() },
                     onBack = { navController.popBackStack() },
+                )
+            }
+
+            composable(Routes.LIBRARY) {
+                val viewModel: LibraryViewModel = hiltViewModel()
+                LibraryScreen(
+                    viewModel = viewModel,
+                    onBookClick = { isbn, book ->
+                        bookStore.put(book)
+                        navController.navigate(Routes.bookDetail(isbn))
+                    },
                 )
             }
         },
