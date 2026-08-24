@@ -5,12 +5,15 @@ import androidx.work.WorkManager
 import coil.ImageLoader
 import coil.disk.DiskCache
 import coil.request.CachePolicy
+import com.google.android.horologist.networks.data.RequestType
+import com.google.android.horologist.networks.okhttp.NetworkAwareCallFactory
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import fm.libro.wearos.auth.AuthManager
+import okhttp3.Call
 import javax.inject.Singleton
 
 @Module
@@ -33,6 +36,7 @@ object AppModule {
     @Singleton
     fun imageLoader(
         @ApplicationContext context: Context,
+        callFactory: Call.Factory,
     ): ImageLoader = ImageLoader.Builder(context)
         .crossfade(false)
         .respectCacheHeaders(false)
@@ -44,5 +48,8 @@ object AppModule {
         .memoryCachePolicy(CachePolicy.ENABLED)
         .diskCachePolicy(CachePolicy.ENABLED)
         .networkCachePolicy(CachePolicy.ENABLED)
+        .callFactory {
+            NetworkAwareCallFactory(callFactory, RequestType.ImageRequest)
+        }
         .build()
 }

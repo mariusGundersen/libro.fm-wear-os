@@ -1,10 +1,13 @@
 package fm.libro.wearos.di
 
+import com.google.android.horologist.networks.data.RequestType
+import com.google.android.horologist.networks.okhttp.NetworkAwareCallFactory
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import fm.libro.wearos.api.LibroFmApi
+import okhttp3.Call
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
@@ -44,11 +47,17 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun retrofit(
+    fun callFactory(
         okHttpClient: OkHttpClient,
+    ): Call.Factory = okHttpClient
+
+    @Provides
+    @Singleton
+    fun retrofit(
+        callFactory: Call.Factory,
     ): Retrofit = Retrofit.Builder()
         .baseUrl(BASE_URL)
-        .client(okHttpClient)
+        .callFactory(NetworkAwareCallFactory(callFactory, RequestType.ApiRequest))
         .addConverterFactory(GsonConverterFactory.create())
         .build()
 
