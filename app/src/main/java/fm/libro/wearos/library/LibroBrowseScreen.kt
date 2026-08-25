@@ -69,7 +69,7 @@ fun LibroBrowseScreen(
                     .padding(top = 8.dp),
             ) {
                 Text(
-                    text = "Browse All Books",
+                    text = "Log in to browse",
                     style = MaterialTheme.typography.bodyLarge,
                     modifier = Modifier.padding(12.dp),
                 )

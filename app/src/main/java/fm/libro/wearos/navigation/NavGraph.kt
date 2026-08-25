@@ -60,7 +60,11 @@ fun AppNavGraph(
                     navController.navigate(Routes.bookDetail(isbn))
                 },
                 onBrowseAllClick = {
-                    navController.navigate(Routes.LIBRARY)
+                    if (authManager.isLoggedIn) {
+                        navController.navigate(Routes.LIBRARY)
+                    } else {
+                        navController.navigate(Routes.LOGIN)
+                    }
                 },
             )
         },
@@ -74,16 +78,14 @@ fun AppNavGraph(
         deepLinkPrefix = "librofm",
         navController = navController,
         additionalNavRoutes = {
-            if (!authManager.isLoggedIn) {
-                composable(Routes.LOGIN) {
-                    val viewModel: LoginViewModel = hiltViewModel()
-                    LoginScreen(
-                        viewModel = viewModel,
-                        onLoginSuccess = {
-                            navController.popBackStack()
-                        },
-                    )
-                }
+            composable(Routes.LOGIN) {
+                val viewModel: LoginViewModel = hiltViewModel()
+                LoginScreen(
+                    viewModel = viewModel,
+                    onLoginSuccess = {
+                        navController.popBackStack()
+                    },
+                )
             }
 
             composable(
