@@ -22,6 +22,7 @@ import fm.libro.wearos.data.StoredTrack
 import fm.libro.wearos.download.AudiobookDownloadWorker
 import fm.libro.wearos.download.DownloadManager
 import fm.libro.wearos.player.AudiobookMediaMapper
+import fm.libro.wearos.player.PlayerStateRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -46,6 +47,7 @@ class BookDetailViewModel
         private val db: AppDatabase,
         private val workManager: WorkManager,
         private val playerRepository: PlayerRepositoryImpl,
+        private val playerStateRepository: PlayerStateRepository,
         private val bookStore: BookStore,
         savedStateHandle: SavedStateHandle,
     ) : ViewModel() {
@@ -197,6 +199,7 @@ class BookDetailViewModel
                     progress?.positionMs?.milliseconds
                 )
                 playerRepository.play()
+                playerStateRepository.setLastPlayingIsbn(isbn)
             }
         }
     }

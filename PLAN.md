@@ -5,19 +5,20 @@
 The `MediaBrowser` is wired in DI but nothing pushes content to the player.
 
 ### 1.1 Wire media items from detail screens to player
-- **Files**: `BookDetailScreen.kt`, `DownloadedBookDetailScreen.kt`
-- When user taps "Play", convert `Audiobook` tracks to `MediaItem` list and pass via `PlayerRepository.setMediaItems()`
-- Need a mapper: `Audiobook` + `DownloadManifest` → `List<MediaItem>`
-- Store the `Audiobook` in a place accessible to `PlayerViewModel` (e.g. static cache or DI-scoped)
+- **Files**: `BookDetailScreen.kt`
+- When user taps "Play", convert `Audiobook` tracks to `Media` list and pass via `PlayerRepository.setMediaList()`
+- Mapper: `AudiobookMediaMapper` converts `Audiobook` + `DownloadManifest` → `List<Media>` (manifest-based) or `List<StoredTrack>` → `List<Media>` (downloaded)
+- Book data passed between screens via `BookStore` (Hilt `@Singleton`)
 
 ### 1.2 Resume playback from last position
-- **Files**: `PlayerViewModel.kt`
-- On player start, seek to saved `PlaybackProgressEntity.positionMs`
-- Observe `PlaybackProgressEntity` changes and persist periodically
+- **Files**: `BookDetailViewModel.kt`, `PlayerViewModel.kt`
+- `BookDetailViewModel.playBook()` reads `PlaybackProgressEntity` from Room, passes `trackIndex` + `positionMs` to `playerRepository.setMediaList()`
+- `DownloadManager.saveProgress()` writes `userMetadata.trackIndex` + `trackSeconds` → `PlaybackProgressEntity`
 
 ### 1.3 Add `setMedia*` call before play
-- **Files**: `LibroPlayerViewModel.kt` or detail screen composables
-- Before `playerUiController.play()`, ensure media items are set on the underlying player
+- **Files**: `BookDetailViewModel.kt`
+- `playBook()` calls `playerRepository.setMediaList()` then `playerRepository.play()`
+- Both online (manifest-based) and downloaded (stored tracks) paths implemented
 
 ---
 
@@ -75,44 +76,19 @@ The `LibroFmClient` singleton bypasses DI.
 
 ### 3.2 Remove `LibroFmClient` singleton
 - **File**: `api/LibroFmClient.kt`
-- Delete or refactor to a thin wrapper around the Hilt-provided `LibroFmApi`
-- Update all call sites: `LoginViewModel`, `LibraryPagingSource`, `AudiobookDownloadWorker`
+- Deleted. All call sites use Hilt-provided `LibroFmApi`
+- `LoginViewModel`, `LibraryPagingSource` inject `LibroFmApi` directly
 
 ### 3.3 Add `NetworkAwareCallFactory` integration
 - **File**: `di/NetworkModule.kt`
-- Add `horologist-network-awareness-okhttp` dependency
-- Wrap `OkHttpClient` with `NetworkAwareCallFactory` tagging requests as `ApiRequest` or `StreamRequest`
-- Already have `horologist-network-awareness-okhttp` and `horologist-network-awareness-ui` in dependencies
+- `NetworkAwareCallFactory` wraps `Call.Factory` for Retrofit (`RequestType.ApiRequest`) and Coil (`RequestType.ImageRequest`)
+- Provided via `AppModule` for image loading, `NetworkModule` for API
 
 ---
 
 ## Phase 4: Implement Catalog Sync
 
-Fill the empty `SyncModule` stub.
-
-### 4.1 Create `PlaylistRepositorySyncable`
-- **New file**: `sync/PlaylistRepositorySyncable.kt`
-- `syncWith()`: diff remote catalog vs local Room `DownloadedBookEntity` table
-- Fetch library page from API, compare with local, apply changes
-- Implement `ChangeListVersionRepository` with a real version counter
-
-### 4.2 Create `NetworkChangeListService`
-- **New file**: `api/NetworkChangeListService.kt`
-- Since the Libro.fm API lacks a changelist endpoint, fabricate one by:
-  - Fetching full catalog
-  - Diffing against last-known state
-  - Returning added/removed ISBNs
-
-### 4.3 Wire into `SyncModule`
-- **File**: `sync/SyncModule.kt`
-- Replace `emptyArray<Syncable>()` with the real `PlaylistRepositorySyncable`
-- Configure notification channel for sync progress
-- Provide real `ChangeListVersionRepository` backed by DataStore
-
-### 4.4 Trigger sync on app launch and periodically
-- **File**: `LibroFmApp.kt` or `MainActivity.kt`
-- Call `Sync.initialize()` (already called in `LibroFmApp.kt:18`)
-- Configure sync interval and constraints (WiFi only, charging, etc.)
+> Not planned. The Libro.fm API lacks a changelist/diff endpoint, and the current browse → tap → download flow covers the real use case on Wear OS.
 
 ---
 
@@ -120,19 +96,17 @@ Fill the empty `SyncModule` stub.
 
 ### 5.1 Migrate to `MediaPlayerScaffold`
 - **File**: `navigation/NavGraph.kt`
-- Replace `SwipeDismissableNavHost` with Horologist's `MediaPlayerScaffold`
-- Get free player, browse, volume, settings routes
-- Keep custom routes for login, book detail, downloaded book detail
+- `MediaPlayerScaffold` is the navigation backbone
+- Pager: page 0 = player, page 1 = downloaded books browse
+- Extra routes in `additionalNavRoutes`: login, book detail, full library
 
 ### 5.2 Add type-safe navigation
 - **File**: `navigation/NavGraph.kt`
-- Convert string routes to `@Serializable` data objects/classes
-- Use Horologist's `composable<T>` helper for type-safe destination registration
+- String routes used. Type-safe `@Serializable` navigation not implemented (low priority).
 
 ### 5.3 Add deep links
 - **Files**: `AndroidManifest.xml`, navigation
-- Create `NavDeepLinkIntentBuilder` for `{prefix}/player?isbn=X` deep links
-- Support auto-play from tiles/complications via intent extras
+- `deepLinkPrefix = "librofm"` configured. Full deep link support not implemented.
 
 ---
 
@@ -140,73 +114,65 @@ Fill the empty `SyncModule` stub.
 
 ### 6.1 Watch-face complications
 - **New file**: `complication/MediaStatusComplicationService.kt`
-- Create `DataUpdates` listener attached to the player
-- Provide current track title/artwork to complication providers
-- Register in manifest with `BIND_COMPLICATION_PROVIDER` permission
+- Not implemented.
 
 ### 6.2 Tiles
 - **New file**: `tile/MediaCollectionsTileService.kt`
-- Render recently played / downloaded books as tile shortcuts
-- Deep-link into playback with extras
+- Not implemented.
 
 ### 6.3 Proto DataStore settings
-- **New file**: `data/settings/SettingsSerializer.kt`
-- Migrate `AuthManager` (DataStore Preferences) to include playback settings:
-  - `suppressSpeakerPlayback`
-  - `cacheItems` (use cache vs stream)
-  - `audioOffloadEnabled`
-- Already have `datastore-preferences` dependency
+- **New file**: `settings/SettingsViewModel.kt`
+- `SettingsViewModel` uses Preferences DataStore with `suppress_speaker` and `audio_offload` keys
+- Display-only settings UI (no write toggles yet)
 
 ### 6.4 Audio offload manager
-- **File**: `di/PlaybackServiceModule.kt`
-- Connect `AudioOffloadManager` to player when API level ≥ 30
-- Pass real `AudioOffloadListener` to `audioSink()`
+- **Files**: `offload/AudioOffloadManager.kt`, `offload/AudioOffloadListenerList.kt`, `offload/AudioOffloadStatus.kt`, `offload/OffloadTimes.kt`, `offload/AudioError.kt`
+- Connected to player via `PlaybackServiceModule` when API ≥ 30
+- `AudioOffloadListener` passed to `audioSink()`
 
 ### 6.5 Speaker suppression
 - **Files**: `di/PlaybackServiceModule.kt`, `di/Annotations.kt`
-- `@SuppressSpeakerPlayback` qualifier already exists
-- Wire it to `ExoPlayer.Builder.setSuppressPlaybackOnUnsuitableOutput()`
+- `@SuppressSpeakerPlayback` qualifier exists
+- Wired to `ExoPlayer.Builder.setSuppressPlaybackOnUnsuitableOutput()`
 
 ### 6.6 SuspendingMediaLibrarySessionCallback
-- **File**: `player/LibroMediaLibrarySessionCallback.kt`
-- Extend Horologist's `SuspendingMediaLibrarySessionCallback` instead of raw interface
-- Allows suspend-based overrides when browse content is eventually implemented
+- **File**: `player/PlaybackService.kt`
+- `SuspendingMediaLibrarySessionCallback` wired with `CoroutineScope` + `ErrorReporter`
 
 ---
 
 ## Phase 7: UI Improvements
 
 ### 7.1 Add settings screen
-- **New file**: `settings/SettingsScreen.kt`, `settings/SettingsViewModel.kt`
-- Toggle speaker suppression, audio offload, cache mode
-- Read/write Proto DataStore settings
+- **Files**: `settings/SettingsScreen.kt`, `settings/SettingsViewModel.kt`
+- Display-only settings in `MediaPlayerScaffold` settings route
+- Toggle controls not implemented yet
 
 ### 7.2 Add browsing screen for library
-- Create a `MediaPlayerScaffold`-compatible browse screen
-- Show downloaded books with artwork, progress, and play button
-- Integrate with `PlayerRepository` for media item management
+- `LibroBrowseScreen`: downloaded books on pager page 1
+- `LibraryScreen`: full paginated API library on `library` route
+- "Browse All Books" button navigates from downloaded list to full library
 
 ### 7.3 Add volume control screen
-- Use Horologist's built-in volume screen from `MediaPlayerScaffold`
-- Or create a custom volume screen using `horologist-audio-ui-material3`
+- Rotary volume via `volumeViewModel` on `PlayerScreen`
+- Uses Horologist's stateful `PlayerScreen` with `volumeRotaryBehavior`
 
 ### 7.4 Add audio debug screen
-- Player state, buffer status, audio offload status
-- Useful during development
+- Not implemented.
 
 ---
 
 ## Execution Order
 
-| Priority | Phase | Effort | Risk |
-|----------|-------|--------|------|
-| 1 | Phase 1: Finish playback path | Low | Low — missing `setMedia*` calls |
-| 2 | Phase 6.6: SuspendingMediaLibrarySessionCallback | Trivial | None |
-| 3 | Phase 3: Move API behind Hilt | Medium | Low — refactor singleton to DI |
-| 4 | Phase 6.3-6.5: Settings, offload, suppression | Medium | Low — config plumbing |
-| 5 | Phase 7.1-7.2: Settings + browse UI | Medium | Low |
-| 6 | Phase 4: Catalog sync | Medium | Medium — needs API diffing strategy |
-| 7 | Phase 2: Replace download system | High | High — touches core download/playback path |
-| 8 | Phase 5: Upgrade navigation | Medium | Medium — scaffold migration |
-| 9 | Phase 6.1-6.2: Complications + tiles | Low | Low — additive features |
-| 10 | Phase 7.3-7.4: Volume + debug UI | Low | Low — additive features |
+| Status | Phase | Notes |
+|--------|-------|-------|
+| ✅ Done | Phase 1: Finish playback path | MediaMapper, playAudiobook, resume from saved position |
+| ✅ Done | Phase 3: Move API behind Hilt | NetworkModule, LibroFmClient deleted, NetworkAwareCallFactory |
+| ✅ Done | Phase 5: Upgrade navigation | MediaPlayerScaffold, additional routes |
+| ✅ Done | Phase 6.3-6.5: Settings, offload, suppression | SettingsViewModel, AudioOffloadManager, @SuppressSpeakerPlayback |
+| ✅ Done | Phase 6.6: SuspendingMediaLibrarySessionCallback | CoroutineScope + ErrorReporter |
+| ✅ Done | Phase 7.1-7.3: Settings + browse + volume UI | SettingsScreen, LibroBrowseScreen, LibraryScreen, rotary volume |
+| ❌ Not planned | Phase 4: Catalog sync | API lacks changelist endpoint |
+| ❌ Not started | Phase 2: Replace download system | High risk — touches core download/playback path |
+| ❌ Not started | Phase 6.1-6.2: Complications + tiles | Additive features |
+| ❌ Not started | Phase 7.4: Audio debug screen | Additive feature |
