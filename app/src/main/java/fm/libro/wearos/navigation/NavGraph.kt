@@ -48,7 +48,8 @@ fun AppNavGraph(
         playerScreen = {
             val playerViewModel: LibroPlayerViewModel = hiltViewModel()
             LibroMediaPlayerScreen(
-                viewModel = playerViewModel,
+                playerViewModel = playerViewModel,
+                volumeViewModel = volumeViewModel,
             )
         },
         libraryScreen = {
