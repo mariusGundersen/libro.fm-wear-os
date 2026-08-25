@@ -3,6 +3,7 @@ package fm.libro.wearos.di
 import android.annotation.SuppressLint
 import android.app.Service
 import android.content.Context
+import android.os.Build
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
@@ -13,6 +14,7 @@ import androidx.media3.common.TrackSelectionParameters.AudioOffloadPreferences
 import androidx.media3.common.util.Clock
 import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.ExoPlayer.AudioOffloadListener
 import androidx.media3.exoplayer.LoadControl
 import androidx.media3.exoplayer.RenderersFactory
 import androidx.media3.exoplayer.analytics.AnalyticsCollector
@@ -28,20 +30,18 @@ import androidx.media3.session.MediaLibraryService.MediaLibrarySession
 import androidx.media3.ui.WearUnsuitableOutputPlaybackSuppressionResolverListener
 import com.google.android.horologist.media3.config.WearMedia3Factory
 import com.google.android.horologist.media3.logging.AnalyticsEventLogger
-import android.os.Build
-import androidx.media3.exoplayer.ExoPlayer.AudioOffloadListener
 import com.google.android.horologist.media3.logging.ErrorReporter
 import com.google.android.horologist.media3.logging.TransferListener
 import com.google.android.horologist.media3.navigation.IntentBuilder
 import com.google.android.horologist.media3.tracing.TracingListener
-import fm.libro.wearos.offload.AudioOffloadManager
-import fm.libro.wearos.player.LibroMediaLibrarySessionCallback
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.components.ServiceComponent
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.android.scopes.ServiceScoped
+import fm.libro.wearos.offload.AudioOffloadManager
+import fm.libro.wearos.player.LibroMediaLibrarySessionCallback
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
@@ -118,6 +118,7 @@ object PlaybackServiceModule {
         @SuppressSpeakerPlayback suppressSpeakerPlayback: Boolean,
         audioOffloadManager: AudioOffloadManager,
         serviceCoroutineScope: CoroutineScope,
+        @IsSamsungDevice isSamsungDevice: Boolean
     ): Player = ExoPlayer.Builder(service, audioOnlyRenderersFactory)
         .setAnalyticsCollector(analyticsCollector)
         .setMediaSourceFactory(mediaSourceFactory)
@@ -134,7 +135,13 @@ object PlaybackServiceModule {
             trackSelectionParameters = trackSelectionParameters.buildUpon()
                 .setAudioOffloadPreferences(
                     AudioOffloadPreferences.Builder()
-                        .setAudioOffloadMode(AudioOffloadPreferences.AUDIO_OFFLOAD_MODE_ENABLED)
+                        .setAudioOffloadMode(
+                            if (isSamsungDevice) {
+                                AudioOffloadPreferences.AUDIO_OFFLOAD_MODE_DISABLED
+                            } else {
+                                AudioOffloadPreferences.AUDIO_OFFLOAD_MODE_ENABLED
+                            }
+                        )
                         .setIsSpeedChangeSupportRequired(false)
                         .setIsGaplessSupportRequired(false)
                         .build(),

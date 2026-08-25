@@ -2,37 +2,35 @@ package fm.libro.wearos.player
 
 import com.google.android.horologist.annotations.ExperimentalHorologistApi
 import com.google.android.horologist.media.model.Media
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import fm.libro.wearos.api.models.Audiobook
+import fm.libro.wearos.data.DownloadedBookEntity
 import fm.libro.wearos.data.StoredTrack
 
 @OptIn(ExperimentalHorologistApi::class)
 object AudiobookMediaMapper {
+    private val gson = Gson()
 
-    fun mapFromAudiobook(audiobook: Audiobook, trackBasePath: String? = null): List<Media> {
-        val manifest = audiobook.manifest
-        val trackCount = audiobook.trackCount
+    fun mapFromDownloadedBook(
+        entity: DownloadedBookEntity
+    ): List<Media> {
+        val tracks: List<StoredTrack> = gson.fromJson(
+            entity.tracksJson,
+            object : TypeToken<List<StoredTrack>>() {}.type,
+        )
 
-        return (0 until trackCount).map { index ->
-            val track = manifest?.tracks?.getOrNull(index)
-            val trackNumber = track?.number ?: (index + 1)
-            val chapterTitle = track?.chapterTitle ?: "Track $trackNumber"
-
-            val uri = if (trackBasePath != null) {
-                "$trackBasePath/track_$trackNumber"
-            } else {
-                audiobook.manifest?.parts?.firstOrNull()?.url ?: ""
-            }
-
+        return tracks.mapIndexed { index, track ->
             Media(
-                id = "${audiobook.isbn}_$index",
-                uri = uri,
-                title = chapterTitle,
-                artist = audiobook.authorString,
-                artworkUri = audiobook.coverUrl?.let { "https:$it" },
+                id = "${entity.isbn}_$index",
+                uri = track.filePath,
+                title = track.chapterTitle ?: "Track ${track.number}",
+                artist = entity.author,
+                artworkUri = entity.coverLocalPath?.let { "file://$it" },
                 extras = mapOf(
-                    "isbn" to audiobook.isbn,
+                    "isbn" to entity.isbn,
                     "trackIndex" to index,
-                    "trackCount" to trackCount,
+                    "trackCount" to tracks.size,
                 ),
             )
         }
@@ -51,7 +49,7 @@ object AudiobookMediaMapper {
                 uri = track.filePath,
                 title = track.chapterTitle ?: "Track ${track.number}",
                 artist = artist,
-                artworkUri = coverUrl?.let { "https:$it" },
+                //artworkUri = coverUrl?.let { "file://$it" },
                 extras = mapOf(
                     "isbn" to isbn,
                     "trackIndex" to index,

@@ -3,17 +3,14 @@ package fm.libro.wearos.player
 import androidx.lifecycle.viewModelScope
 import com.google.android.horologist.media.data.repository.PlayerRepositoryImpl
 import com.google.android.horologist.media.ui.state.PlayerViewModel
-import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
 import dagger.hilt.android.lifecycle.HiltViewModel
-import fm.libro.wearos.api.models.Audiobook
 import fm.libro.wearos.data.AppDatabase
 import fm.libro.wearos.data.PlaybackProgressEntity
-import fm.libro.wearos.data.StoredTrack
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import javax.inject.Inject
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -25,8 +22,6 @@ class LibroPlayerViewModel
         private val playerStateRepository: PlayerStateRepository,
         private val db: AppDatabase,
     ) : PlayerViewModel(playerRepository) {
-
-    private val gson = Gson()
 
     val playerState = playerRepository.player
 
@@ -40,20 +35,9 @@ class LibroPlayerViewModel
             val isbn = playerStateRepository.lastPlayingIsbn.first() ?: return@launch
             playerStateRepository.currentIsbn = isbn
             val entity = db.downloadedBookDao().getByIsbn(isbn) ?: return@launch
-            val tracks: List<StoredTrack> = gson.fromJson(
-                entity.tracksJson,
-                object : TypeToken<List<StoredTrack>>() {}.type,
-            )
-            if (tracks.isEmpty()) return@launch
 
             val progress = db.playbackProgressDao().getByIsbn(isbn)
-            val mediaList = AudiobookMediaMapper.mapFromStoredTracks(
-                isbn = isbn,
-                title = entity.title,
-                artist = entity.author,
-                coverUrl = entity.coverUrl,
-                tracks = tracks,
-            )
+            val mediaList = AudiobookMediaMapper.mapFromDownloadedBook(entity);
             if (mediaList.isNotEmpty()) {
                 playerRepository.setMediaList(
                     mediaList,
@@ -75,73 +59,42 @@ class LibroPlayerViewModel
 
     override fun onCleared() {
         super.onCleared()
-        saveCurrentProgressSync()
+        val progress = captureCurrentProgress() ?: return
+        runBlocking {
+            db.playbackProgressDao().upsert(progress)
+        }
     }
 
     private fun saveCurrentProgress() {
+        val progress = captureCurrentProgress() ?: return
         viewModelScope.launch {
-            saveCurrentProgressSync()
+            db.playbackProgressDao().upsert(progress)
         }
     }
 
-    private fun saveCurrentProgressSync() {
-        val player = playerState.value ?: return
-        val isbn = playerStateRepository.currentIsbn ?: return
-        if (player.mediaItemCount == 0) return
+    private fun captureCurrentProgress(): PlaybackProgressEntity? {
+        val player = playerState.value ?: return null
+        val isbn = playerStateRepository.currentIsbn ?: return null
+        if (player.mediaItemCount == 0) return null
 
-        val mediaItem = player.currentMediaItem ?: return
-        val trackIndex = player.currentMediaItemIndex
-        val positionMs = player.currentPosition
+        return try {
+            val mediaItem = player.currentMediaItem ?: return null
+            val trackIndex = player.currentMediaItemIndex
+            val positionMs = player.currentPosition
 
-        val trackIsbn = mediaItem.localConfiguration?.tag
-            ?.toString()?.substringBefore("_")
-            ?: isbn
+            val trackIsbn = mediaItem.localConfiguration?.tag
+                ?.toString()?.substringBefore("_")
+                ?: isbn
 
-        viewModelScope.launch {
-            db.playbackProgressDao().upsert(
-                PlaybackProgressEntity(
-                    isbn = trackIsbn,
-                    trackIndex = trackIndex,
-                    positionMs = positionMs,
-                    playbackSpeed = 1.0f,
-                    updatedAt = System.currentTimeMillis(),
-                )
+            PlaybackProgressEntity(
+                isbn = trackIsbn,
+                trackIndex = trackIndex,
+                positionMs = positionMs,
+                playbackSpeed = 1.0f,
+                updatedAt = System.currentTimeMillis(),
             )
-        }
-    }
-
-    fun playAudiobook(audiobook: Audiobook, startIndex: Int = 0) {
-        viewModelScope.launch {
-            val mediaList = AudiobookMediaMapper.mapFromAudiobook(audiobook)
-            if (mediaList.isNotEmpty()) {
-                playerRepository.setMediaList(mediaList, startIndex)
-                playerRepository.play()
-                playerStateRepository.setLastPlayingIsbn(audiobook.isbn)
-            }
-        }
-    }
-
-    fun playFromStoredTracks(
-        isbn: String,
-        title: String,
-        artist: String,
-        coverUrl: String?,
-        tracks: List<fm.libro.wearos.data.StoredTrack>,
-        startIndex: Int = 0,
-    ) {
-        viewModelScope.launch {
-            val mediaList = AudiobookMediaMapper.mapFromStoredTracks(
-                isbn = isbn,
-                title = title,
-                artist = artist,
-                coverUrl = coverUrl,
-                tracks = tracks,
-            )
-            if (mediaList.isNotEmpty()) {
-                playerRepository.setMediaList(mediaList, startIndex)
-                playerRepository.play()
-                playerStateRepository.setLastPlayingIsbn(isbn)
-            }
+        } catch (_: Exception) {
+            null
         }
     }
 }

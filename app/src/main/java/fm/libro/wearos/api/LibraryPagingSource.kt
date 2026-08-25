@@ -3,8 +3,6 @@ package fm.libro.wearos.api
 import androidx.paging.PagingSource
 import androidx.paging.PagingState
 import fm.libro.wearos.api.models.Audiobook
-import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
 
 class LibraryPagingSource(
     private val api: LibroFmApi,
@@ -15,20 +13,8 @@ class LibraryPagingSource(
         val page = params.key ?: 1
         return try {
             val response = api.getLibrary(auth = "Bearer $token", page = page)
-            val books = coroutineScope {
-                response.audiobooks.map { book ->
-                    async {
-                        try {
-                            val manifest = api.getDownloadManifest(auth = "Bearer $token", isbn = book.isbn)
-                            book.manifest = manifest
-                        } catch (_: Exception) {
-                        }
-                        book
-                    }
-                }.map { it.await() }
-            }
             LoadResult.Page(
-                data = books,
+                data = response.audiobooks,
                 prevKey = if (page == 1) null else page - 1,
                 nextKey = if (page >= response.totalPages) null else page + 1,
             )

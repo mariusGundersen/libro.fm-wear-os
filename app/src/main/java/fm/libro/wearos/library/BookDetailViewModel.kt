@@ -10,15 +10,12 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import com.google.android.horologist.media.data.repository.PlayerRepositoryImpl
-import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import fm.libro.wearos.api.models.Audiobook
 import fm.libro.wearos.api.models.AudiobookInfo
 import fm.libro.wearos.data.AppDatabase
 import fm.libro.wearos.data.DownloadedBookEntity
-import fm.libro.wearos.data.StoredTrack
 import fm.libro.wearos.download.AudiobookDownloadWorker
 import fm.libro.wearos.download.DownloadManager
 import fm.libro.wearos.player.AudiobookMediaMapper
@@ -54,7 +51,6 @@ class BookDetailViewModel
 
     private val isbn: String = savedStateHandle["isbn"] ?: ""
     private val downloadManager = DownloadManager(context.applicationContext as Application)
-    private val gson = Gson()
 
     private val _uiState = MutableStateFlow(BookDetailUiState())
     val uiState: StateFlow<BookDetailUiState> = _uiState.asStateFlow()
@@ -134,11 +130,9 @@ class BookDetailViewModel
 
     fun startDownload() {
         val book = _uiState.value.book ?: return
-        val manifest = book.manifest ?: return
 
         val inputData = AudiobookDownloadWorker.createInputData(
             isbn = isbn,
-            manifest = manifest,
             title = book.title,
             author = book.authorString,
             coverUrl = book.coverUrl,
@@ -169,23 +163,13 @@ class BookDetailViewModel
 
     fun playBook(restart: Boolean = false) {
         viewModelScope.launch {
-            val book = _uiState.value.book ?: return@launch
             val mediaList = if (_uiState.value.isDownloaded) {
                 val entity = db.downloadedBookDao().getByIsbn(isbn) ?: return@launch
-                val tracks: List<StoredTrack> = gson.fromJson(
-                    entity.tracksJson,
-                    object : TypeToken<List<StoredTrack>>() {}.type,
-                )
-                AudiobookMediaMapper.mapFromStoredTracks(
-                    isbn = book.isbn,
-                    title = book.title,
-                    artist = book.authorString,
-                    coverUrl = book.coverUrl,
-                    tracks = tracks,
-                )
+                AudiobookMediaMapper.mapFromDownloadedBook(entity)
             } else {
-                AudiobookMediaMapper.mapFromAudiobook(book)
+                return@launch
             }
+
             if (mediaList.isNotEmpty()) {
                 val progress = if (restart) {
                     null

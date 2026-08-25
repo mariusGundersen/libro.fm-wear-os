@@ -13,13 +13,14 @@ import com.google.android.horologist.media.data.mapper.PlaybackStateMapper
 import com.google.android.horologist.media.data.repository.PlayerRepositoryImpl
 import com.google.android.horologist.media.repository.PlayerRepository
 import com.google.android.horologist.media3.flows.buildSuspend
-import fm.libro.wearos.player.PlaybackService
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.ActivityRetainedLifecycle
 import dagger.hilt.android.components.ActivityRetainedComponent
 import dagger.hilt.android.qualifiers.ApplicationContext
+import dagger.hilt.android.scopes.ActivityRetainedScoped
+import fm.libro.wearos.player.PlaybackService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
@@ -32,6 +33,7 @@ import kotlinx.coroutines.launch
 @InstallIn(ActivityRetainedComponent::class)
 object ViewModelModule {
 
+    @ActivityRetainedScoped
     @Provides
     fun providesCoroutineScope(
         activityRetainedLifecycle: ActivityRetainedLifecycle,
@@ -43,6 +45,7 @@ object ViewModelModule {
         }
     }
 
+    @ActivityRetainedScoped
     @Provides
     fun mediaBrowser(
         @ApplicationContext application: Context,
@@ -64,6 +67,7 @@ object ViewModelModule {
         }
 
     @OptIn(ExperimentalHorologistApi::class)
+    @ActivityRetainedScoped
     @Provides
     fun playerRepositoryImpl(
         mediaMapper: MediaMapper,

@@ -13,3 +13,7 @@ annotation class ForApplicationScope
 @Qualifier
 @Retention(AnnotationRetention.BINARY)
 annotation class IsEmulator
+
+@Qualifier
+@Retention(AnnotationRetention.BINARY)
+annotation class IsSamsungDevice
