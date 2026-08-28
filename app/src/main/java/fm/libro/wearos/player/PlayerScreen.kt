@@ -1,10 +1,10 @@
 package fm.libro.wearos.player
 
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.dp
 import com.google.android.horologist.annotations.ExperimentalHorologistApi
 import com.google.android.horologist.audio.ui.VolumeViewModel
 import com.google.android.horologist.media.ui.material3.components.animated.AnimatedMediaControlButtons
@@ -12,12 +12,16 @@ import com.google.android.horologist.media.ui.material3.components.background.Ar
 import com.google.android.horologist.media.ui.material3.screens.player.DefaultMediaInfoDisplay
 import com.google.android.horologist.media.ui.material3.screens.player.PlayerScreen
 import com.google.android.horologist.media.ui.state.model.MediaUiModel
+import fm.libro.wearos.R
+import androidx.wear.compose.material3.Button
+import androidx.wear.compose.material3.Icon
 
 @OptIn(ExperimentalHorologistApi::class)
 @Composable
 fun LibroMediaPlayerScreen(
     playerViewModel: LibroPlayerViewModel,
     volumeViewModel: VolumeViewModel,
+    onPlaylistClick: () -> Unit,
 ) {
     PlayerScreen(
         playerViewModel = playerViewModel,
@@ -40,7 +44,18 @@ fun LibroMediaPlayerScreen(
                 trackPositionUiModel = playerUiState.trackPositionUiModel,
             )
         },
-        buttons = { },
+        buttons = {
+            Button(
+                onClick = onPlaylistClick,
+                modifier = Modifier.size(44.dp),
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_baseline_queue_music_24),
+                    contentDescription = "Playlist",
+                    modifier = Modifier.size(24.dp),
+                )
+            }
+        },
         background = { playerUiState ->
             ArtworkImageBackground((playerUiState.media as? MediaUiModel.Ready)?.artwork)
         },

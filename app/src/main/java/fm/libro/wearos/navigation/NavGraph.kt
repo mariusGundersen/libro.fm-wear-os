@@ -18,6 +18,8 @@ import fm.libro.wearos.library.DownloadedBooksViewModel
 import fm.libro.wearos.library.LibroBrowseScreen
 import fm.libro.wearos.library.LibraryScreen
 import fm.libro.wearos.library.LibraryViewModel
+import fm.libro.wearos.library.PlaylistScreen
+import fm.libro.wearos.library.PlaylistViewModel
 import fm.libro.wearos.player.LibroMediaPlayerScreen
 import fm.libro.wearos.player.LibroPlayerViewModel
 import fm.libro.wearos.player.LibroSnackbarViewModel
@@ -29,6 +31,7 @@ object Routes {
     const val LOGIN = "login"
     const val LIBRARY = "library"
     const val BOOK_DETAIL = "book/{isbn}"
+    const val PLAYLIST = "playlist"
 
     fun bookDetail(isbn: String) = "book/$isbn"
 }
@@ -50,6 +53,7 @@ fun AppNavGraph(
             LibroMediaPlayerScreen(
                 playerViewModel = playerViewModel,
                 volumeViewModel = volumeViewModel,
+                onPlaylistClick = { navController.navigate(Routes.PLAYLIST) },
             )
         },
         libraryScreen = {
@@ -97,6 +101,7 @@ fun AppNavGraph(
                     viewModel = viewModel,
                     onPlay = { navController.navigateToPlayer() },
                     onBack = { navController.popBackStack() },
+                    onPlaylist = { navController.navigate(Routes.PLAYLIST) },
                 )
             }
 
@@ -108,6 +113,15 @@ fun AppNavGraph(
                         bookStore.put(book)
                         navController.navigate(Routes.bookDetail(isbn))
                     },
+                )
+            }
+
+            composable(Routes.PLAYLIST) {
+                val viewModel: PlaylistViewModel = hiltViewModel()
+                PlaylistScreen(
+                    viewModel = viewModel,
+                    onBack = { navController.popBackStack() },
+                    onTrackSelected = { navController.navigateToPlayer() },
                 )
             }
         },

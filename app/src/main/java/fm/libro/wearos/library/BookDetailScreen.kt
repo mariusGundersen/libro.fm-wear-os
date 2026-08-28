@@ -38,6 +38,7 @@ fun BookDetailScreen(
     viewModel: BookDetailViewModel,
     onPlay: () -> Unit,
     onBack: () -> Unit,
+    onPlaylist: () -> Unit = {},
 ) {
     val state by viewModel.uiState.collectAsState()
 
@@ -88,6 +89,14 @@ fun BookDetailScreen(
                             Icon(
                                 painter = painterResource(R.drawable.ic_play),
                                 contentDescription = "Play",
+                            )
+                        }
+                        OutlinedButton(
+                            onClick = onPlaylist,
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_baseline_queue_music_24),
+                                contentDescription = "Playlist",
                             )
                         }
                         OutlinedButton(
