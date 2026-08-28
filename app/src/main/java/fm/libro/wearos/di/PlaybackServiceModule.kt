@@ -39,6 +39,7 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.components.ServiceComponent
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.android.scopes.ServiceScoped
+import fm.libro.wearos.complication.DataUpdates
 import fm.libro.wearos.offload.AudioOffloadManager
 import fm.libro.wearos.player.LibroMediaLibrarySessionCallback
 import kotlinx.coroutines.CoroutineScope
@@ -117,7 +118,8 @@ object PlaybackServiceModule {
         @SuppressSpeakerPlayback suppressSpeakerPlayback: Boolean,
         audioOffloadManager: AudioOffloadManager,
         serviceCoroutineScope: CoroutineScope,
-        @IsSamsungDevice isSamsungDevice: Boolean
+        @IsSamsungDevice isSamsungDevice: Boolean,
+        dataUpdates: DataUpdates,
     ): Player = ExoPlayer.Builder(service, audioOnlyRenderersFactory)
         .setAnalyticsCollector(analyticsCollector)
         .setMediaSourceFactory(mediaSourceFactory)
@@ -129,6 +131,7 @@ object PlaybackServiceModule {
         .setSuppressPlaybackOnUnsuitableOutput(suppressSpeakerPlayback)
         .build().apply {
             addListener(analyticsCollector)
+            addListener(dataUpdates.listener)
             addListener(WearUnsuitableOutputPlaybackSuppressionResolverListener(service))
             addListener(TracingListener())
             trackSelectionParameters = trackSelectionParameters.buildUpon()

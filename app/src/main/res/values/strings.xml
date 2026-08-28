@@ -16,8 +16,6 @@
 
 <resources>
     <string name="app_name">Libro.fm</string>
-    <string name="sample_app_name">UAMP</string>
-    <string name="sample_media_activity">UAMP</string>
     <string name="no_title">No title</string>
     <string name="load_items">Load Initial Items</string>
     <string name="logout">Sign-out</string>
@@ -27,7 +25,6 @@
     <string name="favorite_content_description">Favorite</string>
     <string name="show_test_dialog">Show Test Dialog</string>
     <string name="sample_error">An error occurred</string>
-    <string name="favorites">Favorites</string>
     <string name="sample_media_collection">Media Collection</string>
     <string name="sample_playlists">Playlists</string>
     <string name="show_time_text_info">Show TimeText Info</string>
@@ -74,6 +71,6 @@
     <string name="login">Sign-in</string>
     <string name="sample_guest_mode">Guest Mode</string>
     <string name="seen_login_details">Seen Login Details</string>
-    <string name="complication_content_description">UAMP\n%1$s\n%2$s</string>
+    <string name="complication_content_description">Libro.fm\n%1$s\n%2$s</string>
     <string name="show_licenses">App Licenses</string>
 </resources>

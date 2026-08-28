@@ -129,6 +129,10 @@ dependencies {
     implementation("androidx.wear.compose:compose-foundation:1.6.2")
     implementation("androidx.wear.compose:compose-navigation:1.6.2")
 
+    // Wear Watch Face Complications
+    implementation("androidx.wear.watchface:watchface-complications-data-source-ktx:1.2.1")
+    implementation("androidx.wear.watchface:watchface-complications-rendering:1.2.1")
+
     // Horologist
     val horologistVersion = "0.7.15"
     implementation("com.google.android.horologist:horologist-media:$horologistVersion")
