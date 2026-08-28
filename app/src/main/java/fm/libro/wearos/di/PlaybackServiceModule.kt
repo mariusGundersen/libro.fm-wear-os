@@ -3,7 +3,6 @@ package fm.libro.wearos.di
 import android.annotation.SuppressLint
 import android.app.Service
 import android.content.Context
-import android.os.Build
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
@@ -147,10 +146,8 @@ object PlaybackServiceModule {
                         .build(),
                 )
                 .build()
-            if (Build.VERSION.SDK_INT >= 30) {
-                serviceCoroutineScope.launch {
-                    audioOffloadManager.connect(this@apply)
-                }
+            serviceCoroutineScope.launch {
+                audioOffloadManager.connect(this@apply)
             }
         }
 

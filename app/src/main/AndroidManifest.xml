@@ -39,11 +39,6 @@
             </intent-filter>
         </activity>
 
-        <activity
-            android:name=".auth.TextInputActivity"
-            android:exported="false"
-            android:taskAffinity="" />
-
         <service
             android:name=".player.PlaybackService"
             android:exported="true"
