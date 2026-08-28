@@ -9,6 +9,7 @@ import androidx.media3.exoplayer.DecoderReuseEvaluation
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.analytics.AnalyticsListener
 import com.google.android.horologist.media3.logging.ErrorReporter
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -118,5 +119,29 @@ class AudioOffloadManager(
 
         exoPlayer.addAudioOffloadListener(audioOffloadListener)
         exoPlayer.addAnalyticsListener(analyticsListener)
+    }
+
+    @RequiresApi(29)
+    public suspend fun printDebugLogsLoop() {
+        while (true) {
+            printDebugLogs()
+            delay(10000)
+        }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.Q)
+    internal fun printDebugLogs() {
+        val status = _offloadStatus.value
+        val times = status.updateToNow()
+
+        errorReporter.logMessage(
+            "Offload State: " +
+                    "sleeping: ${status.sleepingForOffload} " +
+                    "audioTrackOffload: ${status.trackOffloadDescription()} " +
+                    "format: ${status.format?.sampleMimeType} " +
+                    "times: ${times.shortDescription} " +
+                    "audioOffloadPreferences: ${status.audioOffloadPreferences.audioOffloadMode} ${status.audioOffloadPreferences.isGaplessSupportRequired} ${status.audioOffloadPreferences.isSpeedChangeSupportRequired}",
+            category = ErrorReporter.Category.Playback,
+        )
     }
 }

@@ -4,7 +4,6 @@ import com.google.android.horologist.annotations.ExperimentalHorologistApi
 import com.google.android.horologist.media.model.Media
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
-import fm.libro.wearos.api.models.Audiobook
 import fm.libro.wearos.data.DownloadedBookEntity
 import fm.libro.wearos.data.StoredTrack
 

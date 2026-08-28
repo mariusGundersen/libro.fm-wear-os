@@ -1,6 +1,5 @@
 package fm.libro.wearos.api
 
-import fm.libro.wearos.api.models.Audiobook
 import fm.libro.wearos.api.models.DownloadManifest
 import fm.libro.wearos.api.models.LibraryMetadata
 import fm.libro.wearos.api.models.TokenMetadata
@@ -21,13 +20,13 @@ interface LibroFmApi {
         @Field("password") password: String,
     ): TokenMetadata
 
-    @GET("api/v7/library")
+    @GET("api/v10/library")
     suspend fun getLibrary(
         @Header("Authorization") auth: String,
         @Query("page") page: Int = 1,
     ): LibraryMetadata
 
-    @GET("api/v9/download-manifest")
+    @GET("api/v10/download-manifest")
     suspend fun getDownloadManifest(
         @Header("Authorization") auth: String,
         @Query("isbn") isbn: String,

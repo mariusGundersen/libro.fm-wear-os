@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.layout.ContentScale
@@ -69,7 +68,7 @@ fun LibroBrowseScreen(
                     .padding(top = 8.dp),
             ) {
                 Text(
-                    text = "Log in to browse",
+                    text = if (viewModel.isAuthenticated) { "Browse online" } else { "Log in to browse" },
                     style = MaterialTheme.typography.bodyLarge,
                     modifier = Modifier.padding(12.dp),
                 )

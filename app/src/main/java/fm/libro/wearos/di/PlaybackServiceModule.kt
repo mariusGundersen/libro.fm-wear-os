@@ -24,6 +24,7 @@ import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.source.MediaSource
 import androidx.media3.extractor.DefaultExtractorsFactory
 import androidx.media3.extractor.ExtractorsFactory
+import androidx.media3.extractor.mp3.Mp3Extractor
 import androidx.media3.session.MediaLibraryService
 import androidx.media3.session.MediaLibraryService.MediaLibrarySession
 import androidx.media3.ui.WearUnsuitableOutputPlaybackSuppressionResolverListener
@@ -60,6 +61,7 @@ object PlaybackServiceModule {
     @Provides
     fun loadControl(): LoadControl = DefaultLoadControl.Builder()
         .setBackBuffer(30_000, false)
+        .setPrioritizeTimeOverSizeThresholds(true)
         .build()
 
     @ServiceScoped
@@ -86,7 +88,8 @@ object PlaybackServiceModule {
 
     @ServiceScoped
     @Provides
-    fun extractorsFactory(): ExtractorsFactory = DefaultExtractorsFactory()
+    fun extractorsFactory(): ExtractorsFactory = DefaultExtractorsFactory().setMp3ExtractorFlags(
+        Mp3Extractor.FLAG_ENABLE_CONSTANT_BITRATE_SEEKING)
 
     @ServiceScoped
     @Provides
@@ -129,6 +132,7 @@ object PlaybackServiceModule {
         .setSeekForwardIncrementMs(10_000)
         .setSeekBackIncrementMs(10_000)
         .setSuppressPlaybackOnUnsuitableOutput(suppressSpeakerPlayback)
+        .setStuckBufferingDetectionTimeoutMs(1000)
         .build().apply {
             addListener(analyticsCollector)
             addListener(dataUpdates.listener)
@@ -139,9 +143,9 @@ object PlaybackServiceModule {
                     AudioOffloadPreferences.Builder()
                         .setAudioOffloadMode(
                             if (isSamsungDevice) {
-                                AudioOffloadPreferences.AUDIO_OFFLOAD_MODE_DISABLED
-                            } else {
                                 AudioOffloadPreferences.AUDIO_OFFLOAD_MODE_ENABLED
+                            } else {
+                                AudioOffloadPreferences.AUDIO_OFFLOAD_MODE_REQUIRED
                             }
                         )
                         .setIsSpeedChangeSupportRequired(false)
