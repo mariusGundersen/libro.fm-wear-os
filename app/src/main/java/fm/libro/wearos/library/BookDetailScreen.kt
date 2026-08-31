@@ -84,7 +84,6 @@ fun BookDetailScreen(
                                 viewModel.playBook()
                                 onPlay()
                             },
-                            modifier = Modifier.weight(1f),
                         ) {
                             Icon(
                                 painter = painterResource(R.drawable.ic_play),
@@ -95,7 +94,7 @@ fun BookDetailScreen(
                             onClick = onPlaylist,
                         ) {
                             Icon(
-                                painter = painterResource(R.drawable.ic_baseline_queue_music_24),
+                                painter = painterResource(R.drawable.ic_chapters),
                                 contentDescription = "Playlist",
                             )
                         }

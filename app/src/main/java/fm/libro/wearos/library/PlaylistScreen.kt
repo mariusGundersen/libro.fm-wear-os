@@ -1,6 +1,5 @@
 package fm.libro.wearos.library
 
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -36,7 +35,7 @@ fun PlaylistScreen(
     ) {
         item {
             Text(
-                text = "Playlist",
+                text = "Chapters",
                 style = MaterialTheme.typography.titleLarge,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
             )

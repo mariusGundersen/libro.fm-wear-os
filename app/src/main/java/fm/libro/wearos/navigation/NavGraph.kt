@@ -7,7 +7,6 @@ import androidx.navigation.navArgument
 import androidx.wear.compose.navigation.composable
 import com.google.android.horologist.media.ui.navigation.MediaNavController.navigateToPlayer
 import com.google.android.horologist.media.ui.navigation.MediaPlayerScaffold
-import com.google.android.horologist.media.ui.navigation.NavigationScreen
 import fm.libro.wearos.auth.AuthManager
 import fm.libro.wearos.auth.LoginScreen
 import fm.libro.wearos.auth.LoginViewModel
@@ -15,9 +14,9 @@ import fm.libro.wearos.library.BookDetailScreen
 import fm.libro.wearos.library.BookDetailViewModel
 import fm.libro.wearos.library.BookStore
 import fm.libro.wearos.library.DownloadedBooksViewModel
-import fm.libro.wearos.library.LibroBrowseScreen
 import fm.libro.wearos.library.LibraryScreen
 import fm.libro.wearos.library.LibraryViewModel
+import fm.libro.wearos.library.LibroBrowseScreen
 import fm.libro.wearos.library.PlaylistScreen
 import fm.libro.wearos.library.PlaylistViewModel
 import fm.libro.wearos.player.LibroMediaPlayerScreen
@@ -53,7 +52,7 @@ fun AppNavGraph(
             LibroMediaPlayerScreen(
                 playerViewModel = playerViewModel,
                 volumeViewModel = volumeViewModel,
-                onPlaylistClick = { navController.navigate(Routes.PLAYLIST) },
+                onChaptersClick = { navController.navigate(Routes.PLAYLIST) },
             )
         },
         libraryScreen = {
