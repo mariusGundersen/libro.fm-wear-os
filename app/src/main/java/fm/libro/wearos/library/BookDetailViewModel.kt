@@ -10,6 +10,8 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import com.google.android.horologist.media.data.repository.PlayerRepositoryImpl
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import fm.libro.wearos.api.models.Audiobook
@@ -137,6 +139,7 @@ class BookDetailViewModel
             author = book.authorString,
             coverUrl = book.coverUrl,
             durationSeconds = book.durationSeconds,
+            narrators = book.audiobookInfo?.narrators,
         )
         val request = OneTimeWorkRequestBuilder<AudiobookDownloadWorker>()
             .setInputData(inputData)
@@ -199,7 +202,7 @@ class BookDetailViewModel
             authors = author,
             coverUrl = coverUrl,
             audiobookInfo = AudiobookInfo(
-                narrators = null,
+                narrators = parseNarrators(),
                 duration = durationSeconds,
                 sizeBytes = fileSizeBytes,
                 trackCount = trackCount,
@@ -222,5 +225,17 @@ class BookDetailViewModel
                 null
             },
         )
+    }
+
+    private fun DownloadedBookEntity.parseNarrators(): List<String>? {
+        if (narratorsJson.isNullOrEmpty()) return null
+        return try {
+            Gson().fromJson<List<String>>(
+                narratorsJson,
+                object : TypeToken<List<String>>() {}.type,
+            )
+        } catch (_: Exception) {
+            null
+        }
     }
 }

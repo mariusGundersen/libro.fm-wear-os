@@ -28,6 +28,9 @@ class DownloadManager(private val context: Context) {
         return gson.toJson(stored)
     }
 
+    private fun narratorsJson(book: Audiobook): String =
+        gson.toJson(book.audiobookInfo?.narrators ?: emptyList<String>())
+
     suspend fun downloadAudiobook(
         book: Audiobook,
         manifest: DownloadManifest,
@@ -66,6 +69,7 @@ class DownloadManager(private val context: Context) {
                     durationSeconds = book.durationSeconds,
                     trackCount = manifest.tracks.size,
                     tracksJson = tracksJson(manifest, manifest.tracks.map{ _ -> file}),
+                    narratorsJson = narratorsJson(book),
                     downloadedAt = System.currentTimeMillis(),
                 )
             )
@@ -93,6 +97,7 @@ class DownloadManager(private val context: Context) {
                     durationSeconds = book.durationSeconds,
                     trackCount = mp3Files.size,
                     tracksJson = tracksJson(manifest, mp3Files),
+                    narratorsJson = narratorsJson(book),
                     downloadedAt = System.currentTimeMillis(),
                 )
             )

@@ -108,9 +108,9 @@ fun AppNavGraph(
                 val viewModel: LibraryViewModel = hiltViewModel()
                 LibraryScreen(
                     viewModel = viewModel,
-                    onBookClick = { isbn, book ->
+                    onBookClick = { book ->
                         bookStore.put(book)
-                        navController.navigate(Routes.bookDetail(isbn))
+                        navController.navigate(Routes.bookDetail(book.isbn))
                     },
                 )
             }

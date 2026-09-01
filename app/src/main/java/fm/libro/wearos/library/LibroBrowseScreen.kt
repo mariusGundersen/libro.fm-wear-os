@@ -1,18 +1,23 @@
 package fm.libro.wearos.library
 
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
+import androidx.wear.compose.foundation.lazy.items
 import androidx.wear.compose.material3.Card
 import androidx.wear.compose.material3.ListHeader
 import androidx.wear.compose.material3.MaterialTheme
@@ -52,10 +57,10 @@ fun LibroBrowseScreen(
                 )
             }
         } else {
-            items(books.size, key = { books[it].isbn }) { index ->
+            items(books, key = { it.isbn }) { book ->
                 DownloadedBookCard(
-                    book = books[index],
-                    onClick = { onBookClick(books[index].isbn) },
+                    book,
+                    onClick = { onBookClick(book.isbn) },
                 )
             }
         }
@@ -85,35 +90,37 @@ private fun DownloadedBookCard(
     Card(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
-        contentPadding = PaddingValues(0.dp),
     ) {
         val coverModel: Any? = book.coverLocalPath?.let { File(it) }
             ?: book.coverUrl?.let { "https:$it" }
-        if (coverModel != null) {
-            AsyncImage(
-                model = coverModel,
-                contentDescription = book.title,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clipToBounds(),
-                contentScale = ContentScale.FillWidth,
-            )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(bottom = 12.dp)
+        ) {
+            if (coverModel != null) {
+                AsyncImage(
+                    model = coverModel,
+                    contentDescription = book.title,
+                    modifier = Modifier
+                        .size(32.dp)
+                        .clip(CircleShape),
+                    contentScale = ContentScale.FillWidth,
+                )
+            }
+                Text(
+                    text = book.title,
+                    style = MaterialTheme.typography.bodyLarge,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(start = 12.dp)
+                )
         }
-
         Text(
-            text = book.title,
-            style = MaterialTheme.typography.bodyLarge,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.padding(12.dp),
-        )
-        Text(
-            text = book.author,
+            text = "by ${book.author}, read by ${book.narratorsJson}",
             style = MaterialTheme.typography.bodySmall,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(start = 12.dp, bottom = 12.dp),
         )
     }
 }

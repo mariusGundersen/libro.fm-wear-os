@@ -21,7 +21,12 @@ class DownloadedBooksViewModel
 
     val downloadedBooks: StateFlow<List<DownloadedBookEntity>> =
         db.downloadedBookDao().getAll()
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+            .stateIn(
+                viewModelScope,
+                SharingStarted.WhileSubscribed(5000),
+                emptyList()
+            )
 
     val isAuthenticated = authManager.isLoggedIn
+
 }

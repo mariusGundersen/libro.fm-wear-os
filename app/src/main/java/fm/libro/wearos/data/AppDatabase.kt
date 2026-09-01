@@ -12,7 +12,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         DownloadedBookEntity::class,
         PlaybackProgressEntity::class,
     ],
-    version = 2,
+    version = 3,
     exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -31,13 +31,20 @@ abstract class AppDatabase : RoomDatabase() {
             }
         )
 
+        private val MIGRATION_2_3 = Migration(
+            2, 3,
+            fun(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE downloaded_books ADD COLUMN narratorsJson TEXT NOT NULL DEFAULT '[]'")
+            }
+        )
+
         fun getInstance(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 INSTANCE ?: Room.databaseBuilder(
                     context.applicationContext,
                     AppDatabase::class.java,
                     "librofm.db",
-                ).addMigrations(MIGRATION_1_2).build().also { INSTANCE = it }
+                ).addMigrations(MIGRATION_1_2, MIGRATION_2_3).build().also { INSTANCE = it }
             }
         }
     }

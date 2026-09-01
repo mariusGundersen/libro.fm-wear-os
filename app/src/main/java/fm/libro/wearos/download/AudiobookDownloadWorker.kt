@@ -33,6 +33,7 @@ class AudiobookDownloadWorker
         val author = inputData.getString(KEY_AUTHOR) ?: return Result.failure()
         val coverUrl = inputData.getString(KEY_COVER_URL)
         val durationSeconds = inputData.getInt(KEY_DURATION_SECONDS, 0)
+        val narrators = inputData.getStringArray(KEY_NARRATORS)?.toList()
 
         val token = authManager.token ?: return Result.failure()
 
@@ -48,7 +49,7 @@ class AudiobookDownloadWorker
             authors = author,
             coverUrl = coverUrl,
             audiobookInfo = AudiobookInfo(
-                narrators = null,
+                narrators = narrators,
                 duration = durationSeconds,
                 sizeBytes = null,
                 trackCount = manifest.tracks.size,
@@ -113,6 +114,7 @@ class AudiobookDownloadWorker
         const val KEY_AUTHOR = "author"
         const val KEY_COVER_URL = "cover_url"
         const val KEY_DURATION_SECONDS = "duration_seconds"
+        const val KEY_NARRATORS = "narrators"
         const val KEY_PROGRESS = "progress"
         const val KEY_ERROR = "error"
         const val CHANNEL_ID = "audiobook_downloads"
@@ -125,6 +127,7 @@ class AudiobookDownloadWorker
             author: String,
             coverUrl: String?,
             durationSeconds: Int,
+            narrators: List<String>?,
         ): Data {
             return Data.Builder()
                 .putString(KEY_ISBN, isbn)
@@ -132,6 +135,7 @@ class AudiobookDownloadWorker
                 .putString(KEY_AUTHOR, author)
                 .putString(KEY_COVER_URL, coverUrl)
                 .putInt(KEY_DURATION_SECONDS, durationSeconds)
+                .putStringArray(KEY_NARRATORS, narrators.orEmpty().toTypedArray())
                 .build()
         }
     }
