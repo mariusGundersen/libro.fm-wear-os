@@ -13,7 +13,6 @@ import com.google.android.horologist.media.data.repository.PlayerRepositoryImpl
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import fm.libro.wearos.data.AppDatabase
-import fm.libro.wearos.data.DownloadedBookWithProgress
 import fm.libro.wearos.download.AudiobookDownloadWorker
 import fm.libro.wearos.download.DownloadManager
 import fm.libro.wearos.models.Audiobook
@@ -44,7 +43,6 @@ class BookDetailViewModel
         private val workManager: WorkManager,
         private val playerRepository: PlayerRepositoryImpl,
         private val playerStateRepository: PlayerStateRepository,
-        private val bookStore: BookStore,
         savedStateHandle: SavedStateHandle,
     ) : ViewModel() {
 
@@ -55,30 +53,18 @@ class BookDetailViewModel
     val uiState: StateFlow<BookDetailUiState> = _uiState.asStateFlow()
 
     init {
-        bookStore.get(isbn)?.let { book ->
-            _uiState.value = _uiState.value.copy(book = book)
-        }
         observeDownloadedStatus()
         observeWorkManager()
     }
 
     private fun observeDownloadedStatus() {
         viewModelScope.launch {
-            db.downloadedBookDao().getByIsbnFlow(isbn).collect { entity ->
-                if (entity != null) {
-                    val progress = db.playbackProgressDao().getByIsbn(isbn)
-                    _uiState.value = _uiState.value.copy(
-                        book = Audiobook.fromDownloaded(
-                            DownloadedBookWithProgress(book = entity, progress = progress)
-                        ),
-                        isDownloaded = true,
-                        coverLocalPath = entity.coverLocalPath,
-                    )
-                } else {
-                    _uiState.value = _uiState.value.copy(
-                        isDownloaded = false,
-                    )
-                }
+            db.downloadedBookDao().getByIsbnWithProgress(isbn).collect { entity ->
+                _uiState.value = _uiState.value.copy(
+                    book = Audiobook.fromDownloaded(entity),
+                    isDownloaded = true,
+                    coverLocalPath = entity.book.coverLocalPath,
+                )
             }
         }
     }

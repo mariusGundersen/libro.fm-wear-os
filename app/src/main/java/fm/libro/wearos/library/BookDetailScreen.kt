@@ -38,10 +38,9 @@ fun BookDetailScreen(
     viewModel: BookDetailViewModel,
     onPlay: () -> Unit,
     onBack: () -> Unit,
-    onPlaylist: () -> Unit = {},
+    onChapters: (isbn: String) -> Unit = {},
 ) {
     val state by viewModel.uiState.collectAsState()
-
 
     ScalingLazyColumn(
         modifier = Modifier
@@ -91,7 +90,7 @@ fun BookDetailScreen(
                             )
                         }
                         OutlinedButton(
-                            onClick = onPlaylist,
+                            onClick = { state.book?.isbn?.let(onChapters) },
                         ) {
                             Icon(
                                 painter = painterResource(R.drawable.ic_chapters),

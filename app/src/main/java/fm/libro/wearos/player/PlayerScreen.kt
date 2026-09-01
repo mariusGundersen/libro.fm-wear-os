@@ -29,7 +29,7 @@ import fm.libro.wearos.R
 fun LibroMediaPlayerScreen(
     playerViewModel: LibroPlayerViewModel,
     volumeViewModel: VolumeViewModel,
-    onChaptersClick: () -> Unit,
+    onChaptersClick: (isbn: String) -> Unit,
 ) {
     PlayerScreen(
         playerViewModel = playerViewModel,
@@ -76,7 +76,7 @@ fun LibroMediaPlayerScreen(
                      )
 
                     Button(
-                        onClick = onChaptersClick,
+                        onClick = { (playerUiState.media as? MediaUiModel.Ready)?.id?.split('_')?.first()?.let(onChaptersClick)},
                         enabled = playerUiState.playPauseEnabled,
                         modifier = Modifier.size(44.dp),
                     ) {

@@ -30,5 +30,4 @@ class DownloadedBooksViewModel
             )
 
     val isAuthenticated = authManager.isLoggedIn
-
 }

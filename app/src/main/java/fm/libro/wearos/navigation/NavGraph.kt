@@ -12,13 +12,12 @@ import fm.libro.wearos.auth.LoginScreen
 import fm.libro.wearos.auth.LoginViewModel
 import fm.libro.wearos.library.BookDetailScreen
 import fm.libro.wearos.library.BookDetailViewModel
-import fm.libro.wearos.library.BookStore
+import fm.libro.wearos.library.ChaptersScreen
+import fm.libro.wearos.library.ChaptersViewModel
 import fm.libro.wearos.library.DownloadedBooksViewModel
 import fm.libro.wearos.library.LibraryScreen
 import fm.libro.wearos.library.LibraryViewModel
 import fm.libro.wearos.library.LibroBrowseScreen
-import fm.libro.wearos.library.PlaylistScreen
-import fm.libro.wearos.library.PlaylistViewModel
 import fm.libro.wearos.player.LibroMediaPlayerScreen
 import fm.libro.wearos.player.LibroPlayerViewModel
 import fm.libro.wearos.player.LibroSnackbarViewModel
@@ -30,15 +29,15 @@ object Routes {
     const val LOGIN = "login"
     const val LIBRARY = "library"
     const val BOOK_DETAIL = "book/{isbn}"
-    const val PLAYLIST = "playlist"
+    const val CHAPTERS = "book/{isbn}/chapters"
 
     fun bookDetail(isbn: String) = "book/$isbn"
+    fun bookChapters(isbn: String) = "book/$isbn/chapters"
 }
 
 @Composable
 fun AppNavGraph(
     authManager: AuthManager,
-    bookStore: BookStore,
     navController: androidx.navigation.NavHostController,
     volumeViewModel: LibroVolumeViewModel,
 ) {
@@ -52,7 +51,7 @@ fun AppNavGraph(
             LibroMediaPlayerScreen(
                 playerViewModel = playerViewModel,
                 volumeViewModel = volumeViewModel,
-                onChaptersClick = { navController.navigate(Routes.PLAYLIST) },
+                onChaptersClick = { isbn -> navController.navigate(Routes.bookChapters(isbn)) },
             )
         },
         libraryScreen = {
@@ -100,7 +99,7 @@ fun AppNavGraph(
                     viewModel = viewModel,
                     onPlay = { navController.navigateToPlayer() },
                     onBack = { navController.popBackStack() },
-                    onPlaylist = { navController.navigate(Routes.PLAYLIST) },
+                    onChapters = {isbn -> navController.navigate(Routes.bookChapters(isbn)) },
                 )
             }
 
@@ -109,17 +108,18 @@ fun AppNavGraph(
                 LibraryScreen(
                     viewModel = viewModel,
                     onBookClick = { book ->
-                        bookStore.put(book)
                         navController.navigate(Routes.bookDetail(book.isbn))
                     },
                 )
             }
 
-            composable(Routes.PLAYLIST) {
-                val viewModel: PlaylistViewModel = hiltViewModel()
-                PlaylistScreen(
+            composable(
+                Routes.CHAPTERS,
+                arguments = listOf(navArgument("isbn") { type = NavType.StringType }),
+            ) {
+                val viewModel: ChaptersViewModel = hiltViewModel()
+                ChaptersScreen(
                     viewModel = viewModel,
-                    onBack = { navController.popBackStack() },
                     onTrackSelected = { navController.navigateToPlayer() },
                 )
             }
