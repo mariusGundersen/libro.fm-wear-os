@@ -42,12 +42,12 @@ fun AppNavGraph(
     volumeViewModel: LibroVolumeViewModel,
 ) {
     val snackbarViewModel: LibroSnackbarViewModel = hiltViewModel()
+    val playerViewModel: LibroPlayerViewModel = hiltViewModel()
 
     MediaPlayerScaffold(
         snackbarViewModel = snackbarViewModel,
         volumeViewModel = volumeViewModel,
         playerScreen = {
-            val playerViewModel: LibroPlayerViewModel = hiltViewModel()
             LibroMediaPlayerScreen(
                 playerViewModel = playerViewModel,
                 volumeViewModel = volumeViewModel,

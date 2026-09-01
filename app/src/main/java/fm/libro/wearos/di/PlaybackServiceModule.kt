@@ -41,8 +41,12 @@ import dagger.hilt.android.components.ServiceComponent
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.android.scopes.ServiceScoped
 import fm.libro.wearos.complication.DataUpdates
+import fm.libro.wearos.data.AppDatabase
+import fm.libro.wearos.data.PlaybackProgressDao
 import fm.libro.wearos.offload.AudioOffloadManager
 import fm.libro.wearos.player.LibroMediaLibrarySessionCallback
+import fm.libro.wearos.player.PlayerProgressPersister
+import fm.libro.wearos.player.PlayerStateRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
@@ -195,6 +199,28 @@ object PlaybackServiceModule {
                     },
                 )
             }
+
+    @ServiceScoped
+    @Provides
+    fun playbackProgressDao(
+        db: AppDatabase,
+    ): PlaybackProgressDao = db.playbackProgressDao()
+
+    @ServiceScoped
+    @Provides
+    fun playerProgressPersister(
+        player: Player,
+        playbackProgressDao: PlaybackProgressDao,
+        playerStateRepository: PlayerStateRepository,
+        serviceCoroutineScope: CoroutineScope,
+    ): PlayerProgressPersister = PlayerProgressPersister(
+        player = player,
+        playbackProgressDao = playbackProgressDao,
+        playerStateRepository = playerStateRepository,
+        scope = serviceCoroutineScope,
+    ).also {
+        player.addListener(it)
+    }
 
     @ServiceScoped
     @Provides
