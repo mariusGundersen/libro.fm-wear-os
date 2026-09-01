@@ -11,9 +11,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.paging.LoadState
 import androidx.paging.compose.collectAsLazyPagingItems
@@ -23,8 +20,7 @@ import androidx.wear.compose.material3.Card
 import androidx.wear.compose.material3.CircularProgressIndicator
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.Text
-import coil.compose.AsyncImage
-import fm.libro.wearos.api.models.Audiobook
+import fm.libro.wearos.models.Audiobook
 
 @Composable
 fun LibraryScreen(
@@ -75,7 +71,7 @@ fun LibraryScreen(
             ) {
                 item {
                     Text(
-                        text = "All Books",
+                        text = "Available to download",
                         style = MaterialTheme.typography.titleLarge,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                     )
@@ -83,7 +79,7 @@ fun LibraryScreen(
                 items(books.itemCount, key = books.itemKey { it.isbn }) { index ->
                     val book = books[index]
                     if (book != null) {
-                        BookCard(
+                        AudiobookCard(
                             book = book,
                             onClick = { onBookClick(book) },
                         )
@@ -103,67 +99,6 @@ fun LibraryScreen(
                         }
                     }
                 }
-            }
-        }
-    }
-}
-
-@Composable
-private fun BookCard(
-    book: Audiobook,
-    onClick: () -> Unit,
-) {
-    Card(
-        onClick = onClick,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(0.dp),
-        contentPadding = PaddingValues(0.dp),
-    ) {
-        AsyncImage(
-            model = "https:${book.coverUrl}",
-            contentDescription = book.title,
-            modifier = Modifier
-                .padding(0.dp)
-                .fillMaxWidth()
-                .clipToBounds(),
-            contentScale = ContentScale.FillWidth,
-        )
-
-        Column(
-            modifier = Modifier.padding(12.dp),
-        ) {
-            Text(
-                text = book.title,
-                style = MaterialTheme.typography.bodyLarge,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(
-                text = book.authorString,
-                style = MaterialTheme.typography.bodySmall,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            if (book.userMetadata != null) {
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = when {
-                        book.isFinished -> "Finished"
-                        book.isStarted -> "${book.listeningProgressPercent}% · ${book.remainingTimeString} remaining"
-                        else -> book.durationString
-                    },
-                    style = MaterialTheme.typography.bodySmall,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    color = if (book.isFinished) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    },
-                )
             }
         }
     }

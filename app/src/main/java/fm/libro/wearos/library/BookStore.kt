@@ -1,6 +1,6 @@
 package fm.libro.wearos.library
 
-import fm.libro.wearos.api.models.Audiobook
+import fm.libro.wearos.models.Audiobook
 import javax.inject.Inject
 import javax.inject.Singleton
 

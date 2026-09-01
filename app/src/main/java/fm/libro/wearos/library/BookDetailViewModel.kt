@@ -10,16 +10,13 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import com.google.android.horologist.media.data.repository.PlayerRepositoryImpl
-import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
-import fm.libro.wearos.api.models.Audiobook
-import fm.libro.wearos.api.models.AudiobookInfo
 import fm.libro.wearos.data.AppDatabase
-import fm.libro.wearos.data.DownloadedBookEntity
+import fm.libro.wearos.data.DownloadedBookWithProgress
 import fm.libro.wearos.download.AudiobookDownloadWorker
 import fm.libro.wearos.download.DownloadManager
+import fm.libro.wearos.models.Audiobook
 import fm.libro.wearos.player.AudiobookMediaMapper
 import fm.libro.wearos.player.PlayerStateRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -69,8 +66,11 @@ class BookDetailViewModel
         viewModelScope.launch {
             db.downloadedBookDao().getByIsbnFlow(isbn).collect { entity ->
                 if (entity != null) {
+                    val progress = db.playbackProgressDao().getByIsbn(isbn)
                     _uiState.value = _uiState.value.copy(
-                        book = entity.toAudiobook(),
+                        book = Audiobook.fromDownloaded(
+                            DownloadedBookWithProgress(book = entity, progress = progress)
+                        ),
                         isDownloaded = true,
                         coverLocalPath = entity.coverLocalPath,
                     )
@@ -139,7 +139,7 @@ class BookDetailViewModel
             author = book.authorString,
             coverUrl = book.coverUrl,
             durationSeconds = book.durationSeconds,
-            narrators = book.audiobookInfo?.narrators,
+            narrators = book.narrators,
         )
         val request = OneTimeWorkRequestBuilder<AudiobookDownloadWorker>()
             .setInputData(inputData)
@@ -193,49 +193,4 @@ class BookDetailViewModel
 
     private val workName: String
         get() = "${AudiobookDownloadWorker.WORK_NAME_PREFIX}$isbn"
-
-    private suspend fun DownloadedBookEntity.toAudiobook(): Audiobook {
-        val progress = db.playbackProgressDao().getByIsbn(isbn)
-        return Audiobook(
-            isbn = isbn,
-            title = title,
-            authors = author,
-            coverUrl = coverUrl,
-            audiobookInfo = AudiobookInfo(
-                narrators = parseNarrators(),
-                duration = durationSeconds,
-                sizeBytes = fileSizeBytes,
-                trackCount = trackCount,
-                partsCount = null,
-                audioLanguage = null,
-            ),
-            series = null,
-            seriesNum = null,
-            publisher = null,
-            publicationDate = null,
-            description = null,
-            userMetadata = if (progress != null) {
-                fm.libro.wearos.api.models.UserMetadata(
-                    trackIndex = progress.trackIndex,
-                    trackSeconds = progress.positionMs / 1000f,
-                    finished = false,
-                    addedAt = null,
-                )
-            } else {
-                null
-            },
-        )
-    }
-
-    private fun DownloadedBookEntity.parseNarrators(): List<String>? {
-        if (narratorsJson.isNullOrEmpty()) return null
-        return try {
-            Gson().fromJson<List<String>>(
-                narratorsJson,
-                object : TypeToken<List<String>>() {}.type,
-            )
-        } catch (_: Exception) {
-            null
-        }
-    }
 }
