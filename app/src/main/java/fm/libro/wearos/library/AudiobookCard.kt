@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.dp
 import androidx.wear.compose.material3.Card
 import androidx.wear.compose.material3.CircularProgressIndicator
 import androidx.wear.compose.material3.MaterialTheme
+import androidx.wear.compose.material3.ProgressIndicatorDefaults
 import androidx.wear.compose.material3.Text
 import coil.compose.AsyncImage
 import fm.libro.wearos.models.Audiobook
@@ -58,6 +59,9 @@ fun AudiobookCard(
                     modifier = Modifier.size(36.dp),
                     strokeWidth = 2.dp,
                     gapSize = 0.dp,
+                    colors = ProgressIndicatorDefaults.colors(
+                        indicatorColor = MaterialTheme.colorScheme.tertiary
+                    )
                 )
             }
             Column(

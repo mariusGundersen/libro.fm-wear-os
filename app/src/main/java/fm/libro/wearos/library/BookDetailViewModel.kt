@@ -166,13 +166,13 @@ class BookDetailViewModel
                     db.playbackProgressDao().getByIsbn(isbn)
                 }
 
+                playerStateRepository.setLastPlayingIsbn(isbn)
                 playerRepository.setMediaList(
                     mediaList,
                     progress?.trackIndex ?: 0,
                     progress?.positionMs?.milliseconds
                 )
                 playerRepository.play()
-                playerStateRepository.setLastPlayingIsbn(isbn)
             }
         }
     }

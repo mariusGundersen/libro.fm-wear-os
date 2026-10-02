@@ -2,9 +2,9 @@ package fm.libro.wearos.models
 
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
-import fm.libro.wearos.api.models.Audiobook as ApiAudiobook
 import fm.libro.wearos.data.DownloadedBookWithProgress
 import fm.libro.wearos.data.StoredTrack
+import fm.libro.wearos.api.models.Audiobook as ApiAudiobook
 
 data class Track(
     val number: Int,
@@ -64,6 +64,7 @@ data class Audiobook(
     val progressPercent: Int
         get() {
             if (durationSeconds == 0) return 0
+            if (isFinished) return 100
             return ((listenedSeconds / durationSeconds) * 100).toInt().coerceIn(0, 100)
         }
 
@@ -133,7 +134,7 @@ data class Audiobook(
                 durationSeconds = book.durationSeconds,
                 trackCount = book.trackCount,
                 tracks = tracks,
-                isFinished = false,
+                isFinished = progress?.let { p -> p.trackIndex + 1 >= book.trackCount && p.positionMs > 1 } ?: false,
                 trackIndex = progress?.trackIndex ?: 0,
                 positionMs = progress?.positionMs ?: 0L,
             )

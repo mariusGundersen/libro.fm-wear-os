@@ -15,9 +15,9 @@ extensions.configure<ApplicationExtension> {
     defaultConfig {
         applicationId = "fm.libro.wearos"
         minSdk = 30
-        targetSdk = 34
-        versionCode = 4
-        versionName = "0.2.0"
+        targetSdk = 35
+        versionCode = 5
+        versionName = "0.3.0"
     }
 
     buildTypes {
@@ -40,6 +40,13 @@ extensions.configure<ApplicationExtension> {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    testOptions {
+        unitTests {
+            isIncludeAndroidResources = true
+            isReturnDefaultValues = true
+        }
     }
 
     buildFeatures {
@@ -150,4 +157,18 @@ dependencies {
 
     // Debug
     debugImplementation("androidx.compose.ui:ui-tooling")
+
+    testImplementation("junit:junit:4.13.2")
+    testImplementation("org.robolectric:robolectric:4.15.1")
+    testImplementation("androidx.test:core:1.6.1")
+    testImplementation("androidx.test.ext:junit:1.2.1")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")
+    testImplementation("androidx.media3:media3-test-utils:1.11.0")
+}
+android {
+    buildTypes {
+        getByName("release") {
+            signingConfig = signingConfigs.getByName("debug")
+        }
+    }
 }

@@ -40,13 +40,13 @@ class ChaptersViewModel
             val mediaList = AudiobookMediaMapper.mapFromDownloadedBook(entity)
 
             if (mediaList.isNotEmpty()) {
+                playerStateRepository.setLastPlayingIsbn(isbn)
                 playerRepository.setMediaList(
                     mediaList,
                     index,
                     0.milliseconds
                 )
                 playerRepository.play()
-                playerStateRepository.setLastPlayingIsbn(isbn)
             }
         }
     }

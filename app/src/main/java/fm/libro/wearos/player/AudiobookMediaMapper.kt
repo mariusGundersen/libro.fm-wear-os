@@ -17,7 +17,7 @@ object AudiobookMediaMapper {
         val tracks: List<StoredTrack> = gson.fromJson(
             entity.tracksJson,
             object : TypeToken<List<StoredTrack>>() {}.type,
-        )
+        ) ?: return emptyList()
 
         return tracks.mapIndexed { index, track ->
             Media(

@@ -76,7 +76,7 @@ fun LibroMediaPlayerScreen(
                      )
 
                     Button(
-                        onClick = { (playerUiState.media as? MediaUiModel.Ready)?.id?.split('_')?.first()?.let(onChaptersClick)},
+                        onClick = { (playerUiState.media as? MediaUiModel.Ready)?.id?.substringBeforeLast('_')?.let(onChaptersClick) },
                         enabled = playerUiState.playPauseEnabled,
                         modifier = Modifier.size(44.dp),
                     ) {
