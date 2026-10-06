@@ -52,7 +52,7 @@ interface DownloadedBookDao {
         WHERE b.isbn = :isbn
         """
     )
-    fun getByIsbnWithProgress(isbn: String): Flow<DownloadedBookWithProgress>
+    fun getByIsbnWithProgress(isbn: String): Flow<DownloadedBookWithProgress?>
 
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)

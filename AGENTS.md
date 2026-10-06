@@ -38,9 +38,11 @@ Login → Library (paginated) → Book Detail → Chapters → Player
 ```
 
 Routes live in the `Routes` object in `navigation/NavGraph.kt` (`login`, `library`,
-`book/{isbn}`, `book/{isbn}/chapters`) via `SwipeDismissableNavHost`. Book objects are passed
-between screens through a static `BookDetailViewModel.bookCache` companion map (keyed by ISBN),
-not through navigation arguments.
+`book/{isbn}`, `book/{isbn}/chapters`) and are registered in `additionalNavRoutes` of Horologist's
+`MediaPlayerScaffold`. Only the ISBN travels through navigation arguments. The detail screen loads
+the book from Room by ISBN; online books (which have no row yet) are served from
+`library/BookRepository.kt`, whose in-memory cache is warmed automatically as pages of the online
+library are presented.
 
 ### Key Layers
 
@@ -95,7 +97,7 @@ state — that loses the pause save, which is the bug this class exists to preve
 - `downloaded_books`: isbn (PK), title, author, coverUrl, coverLocalPath, format, filePath, fileSizeBytes, durationSeconds, trackCount, tracksJson, downloadedAt
 - `playback_progress`: isbn (PK), trackIndex, positionMs, playbackSpeed, updatedAt
 
-Database migrations are in `AppDatabase.kt`. Current version: 2.
+Database migrations are in `AppDatabase.kt`. Current version: 3.
 
 ### API Endpoints
 

@@ -43,6 +43,7 @@ class BookDetailViewModel
         private val workManager: WorkManager,
         private val playerRepository: PlayerRepositoryImpl,
         private val playerStateRepository: PlayerStateRepository,
+        bookRepository: BookRepository,
         savedStateHandle: SavedStateHandle,
     ) : ViewModel() {
 
@@ -53,6 +54,7 @@ class BookDetailViewModel
     val uiState: StateFlow<BookDetailUiState> = _uiState.asStateFlow()
 
     init {
+        _uiState.value = _uiState.value.copy(book = bookRepository.getBook(isbn))
         observeDownloadedStatus()
         observeWorkManager()
     }
@@ -60,11 +62,18 @@ class BookDetailViewModel
     private fun observeDownloadedStatus() {
         viewModelScope.launch {
             db.downloadedBookDao().getByIsbnWithProgress(isbn).collect { entity ->
-                _uiState.value = _uiState.value.copy(
-                    book = Audiobook.fromDownloaded(entity),
-                    isDownloaded = true,
-                    coverLocalPath = entity.book.coverLocalPath,
-                )
+                if (entity != null) {
+                    _uiState.value = _uiState.value.copy(
+                        book = Audiobook.fromDownloaded(entity),
+                        isDownloaded = true,
+                        coverLocalPath = entity.book.coverLocalPath,
+                    )
+                } else {
+                    _uiState.value = _uiState.value.copy(
+                        isDownloaded = false,
+                        coverLocalPath = null,
+                    )
+                }
             }
         }
     }

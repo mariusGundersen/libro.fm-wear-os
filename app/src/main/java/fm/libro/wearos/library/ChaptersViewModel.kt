@@ -30,8 +30,8 @@ class ChaptersViewModel
     private val isbn: String = savedStateHandle["isbn"] ?: ""
 
     val book: StateFlow<Audiobook?> = db.downloadedBookDao()
-        .getByIsbnWithProgress(isbn).map {
-            entity -> Audiobook.fromDownloaded(entity)
+        .getByIsbnWithProgress(isbn).map { entity ->
+            entity?.let { Audiobook.fromDownloaded(it) }
         }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     fun playTrack(index: Int) {

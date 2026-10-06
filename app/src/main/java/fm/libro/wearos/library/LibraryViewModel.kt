@@ -2,15 +2,10 @@ package fm.libro.wearos.library
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.paging.Pager
-import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import androidx.paging.filter
-import androidx.paging.map
 import dagger.hilt.android.lifecycle.HiltViewModel
-import fm.libro.wearos.api.LibraryPagingSource
-import fm.libro.wearos.api.LibroFmApi
 import fm.libro.wearos.auth.AuthManager
 import fm.libro.wearos.data.AppDatabase
 import fm.libro.wearos.models.Audiobook
@@ -23,9 +18,9 @@ import javax.inject.Inject
 class LibraryViewModel
     @Inject
     constructor(
-        private val db: AppDatabase,
+        db: AppDatabase,
         authManager: AuthManager,
-        private val api: LibroFmApi,
+        bookRepository: BookRepository,
     ) : ViewModel() {
 
     val knownIsbns = db.downloadedBookDao().getAll().map { it.map { book -> book.isbn } }
@@ -33,21 +28,10 @@ class LibraryViewModel
 
     init {
         val token = authManager.token
-        books = if (token != null) {
-            Pager(
-                config = PagingConfig(pageSize = 10, enablePlaceholders = false),
-                pagingSourceFactory = { LibraryPagingSource(api, token) },
-            ).flow
-        } else {
-            Pager(
-                config = PagingConfig(pageSize = 10, enablePlaceholders = false),
-                pagingSourceFactory = { LibraryPagingSource(api, "") },
-            ).flow
-        }
+        books = bookRepository.library(token)
             .combineTransform(knownIsbns) { a, b ->
                 emit(a.filter { book -> !b.contains(book.isbn) })
             }
-            .map { pagingData -> pagingData.map { Audiobook.fromApi(it) } }
             .cachedIn(viewModelScope)
     }
 }
