@@ -29,5 +29,11 @@ class DownloadedBooksViewModel
                 emptyList()
             )
 
-    val isAuthenticated = authManager.isLoggedIn
+    val isAuthenticated: StateFlow<Boolean> =
+        authManager.authState
+            .stateIn(
+                viewModelScope,
+                SharingStarted.WhileSubscribed(5000),
+                authManager.isLoggedIn,
+            )
 }

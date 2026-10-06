@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.runBlocking
@@ -57,6 +58,8 @@ class AuthManager(private val context: Context) {
 
     val isLoggedIn: Boolean
         get() = token != null
+
+    val authState: Flow<Boolean> = dataStore.data.map { it[KEY_TOKEN] != null }
 
     fun saveLogin(token: String, createdAt: Long, username: String, password: String) {
         this.token = token

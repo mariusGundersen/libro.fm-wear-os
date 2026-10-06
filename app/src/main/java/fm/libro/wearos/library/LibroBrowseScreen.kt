@@ -23,6 +23,7 @@ fun LibroBrowseScreen(
     onBrowseAllClick: () -> Unit,
 ) {
     val books by viewModel.downloadedBooks.collectAsState()
+    val isAuthenticated by viewModel.isAuthenticated.collectAsState()
 
     ScalingLazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -63,7 +64,7 @@ fun LibroBrowseScreen(
                     .padding(top = 8.dp),
             ) {
                 Text(
-                    text = if (viewModel.isAuthenticated) { "Browse online" } else { "Log in to browse" },
+                    text = if (isAuthenticated) { "Browse online" } else { "Log in to browse" },
                     style = MaterialTheme.typography.bodyLarge,
                     modifier = Modifier.padding(12.dp),
                 )
