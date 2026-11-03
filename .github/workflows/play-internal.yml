@@ -7,6 +7,16 @@ on:
       - "**/*.md"
       - ".github/**"
   workflow_dispatch:
+    inputs:
+      track:
+        description: "Play track to publish to (Wear OS form factor)"
+        required: false
+        default: "wear:qa"
+      force:
+        description: "Publish even with no feat/fix commits (bumps patch)"
+        type: boolean
+        required: false
+        default: false
 
 concurrency:
   group: play-internal
@@ -39,9 +49,15 @@ jobs:
 
       - name: Determine next version
         id: version
+        env:
+          FORCE: ${{ inputs.force }}
         run: |
           CURRENT=$(git describe --tags --abbrev=0 --match 'v[0-9]*' 2>/dev/null || echo 'v0.0.0')
           NEXT=$(svu next)
+          if [ "$NEXT" = "$CURRENT" ] && [ "$FORCE" = "true" ]; then
+            NEXT=$(svu patch)
+            echo "::warning::No feat/fix commits since $CURRENT, forcing a patch release"
+          fi
           echo "previous: $CURRENT"
           echo "next:     $NEXT"
           if [ "$NEXT" = "$CURRENT" ]; then
@@ -95,7 +111,7 @@ jobs:
           RELEASE_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           RELEASE_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
           ANDROID_PUBLISHER_CREDENTIALS: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
-        run: ./gradlew publishReleaseBundle -PversionName="${{ steps.version.outputs.name }}"
+        run: ./gradlew publishReleaseBundle -PversionName="${{ steps.version.outputs.name }}" -PplayTrack="${{ inputs.track || 'wear:qa' }}"
 
       - name: Tag published commit
         if: steps.version.outputs.publish == 'true'

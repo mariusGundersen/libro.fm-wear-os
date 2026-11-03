@@ -187,7 +187,7 @@ dependencies {
 }
 
 play {
-    track.set(providers.gradleProperty("playTrack").getOrElse("internal"))
+    track.set(providers.gradleProperty("playTrack").getOrElse("wear:qa"))
     defaultToAppBundles.set(true)
     releaseStatus.set(ReleaseStatus.COMPLETED)
     resolutionStrategy.set(

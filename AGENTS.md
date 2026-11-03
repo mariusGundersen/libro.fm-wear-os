@@ -19,14 +19,22 @@ upload to the Play Console **internal** track via Gradle Play Publisher.
 - **Version** comes from conventional commit subjects since the newest `v*` tag (`svu next`):
   `fix:`/`perf:` → patch, `feat:` → minor, `!` or `BREAKING CHANGE:` → major (strict semver, so a
   breaking change on 0.x jumps to 1.0.0). A push whose commits contain no `feat`/`fix` publishes
-  nothing, so merge commits and `chore:`/`docs:`/`ci:` work stay off the testing track.
+  nothing, so merge commits and `chore:`/`docs:`/`ci:` work stay off the testing track. A manual
+  run can force a patch release with the `force` input.
+- **Track:** Wear OS form-factor tracks are prefixed (`wear:qa`, `wear:beta`, `wear:production`;
+  closed testing is `wear:<name>`). The app publishes to **`wear:qa`** (internal testing) by default;
+  override with `-PplayTrack=wear:beta` locally or the `track` input on a manual workflow run.
+  Play Console must have the dedicated Wear OS track enabled (Test and release → Advanced settings →
+  Form factors → Wear OS → Manage → *Use a dedicated release track for Wear OS*), otherwise the
+  upload fails with a track-not-found error.
 - `versionName` is the computed tag (`v0.6.0`); `versionCode` is resolved by
   `ResolutionStrategy.AUTO` (Play's max + 1) whenever publisher credentials are present.
 - The published commit is tagged `vX.Y.Z` and the tag pushed only after the upload succeeds, so a
   failed release never advances the version. `git describe` therefore stays meaningful.
 - PRs are checked by `.github/workflows/commitlint.yml`; non-conventional subjects fail the check
   instead of silently producing no version bump.
-- Publish locally with `./gradlew publishReleaseBundle --track internal`.
+- Publish locally with `./gradlew publishReleaseBundle` (uses `wear:qa`; `--track wear:beta` to
+  target another track).
 - Credentials come from `ANDROID_PUBLISHER_CREDENTIALS` (service-account JSON contents); signing
   comes from `RELEASE_STORE_FILE`, `RELEASE_STORE_PASSWORD`, `RELEASE_KEY_ALIAS`,
   `RELEASE_KEY_PASSWORD`. Without those env vars the release build falls back to the debug keystore
