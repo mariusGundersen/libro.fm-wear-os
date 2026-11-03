@@ -13,7 +13,10 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
-  contents: read
+  contents: write
+
+env:
+  SVU_VERSION: 3.4.4
 
 jobs:
   publish:
@@ -24,6 +27,30 @@ jobs:
         with:
           fetch-depth: 0
           fetch-tags: true
+
+      - name: Install svu
+        run: |
+          curl -sSfL -o svu.tar.gz "https://github.com/caarlos0/svu/releases/download/v${{ env.SVU_VERSION }}/svu_${{ env.SVU_VERSION }}_linux_amd64.tar.gz"
+          curl -sSfL -o checksums.txt "https://github.com/caarlos0/svu/releases/download/v${{ env.SVU_VERSION }}/checksums.txt"
+          grep " svu_${{ env.SVU_VERSION }}_linux_amd64.tar.gz$" checksums.txt | sha256sum -c -
+          tar -xzf svu.tar.gz svu
+          sudo install -m 0755 svu /usr/local/bin/svu
+          svu --version | tail -5
+
+      - name: Determine next version
+        id: version
+        run: |
+          CURRENT=$(git describe --tags --abbrev=0 --match 'v[0-9]*' 2>/dev/null || echo 'v0.0.0')
+          NEXT=$(svu next)
+          echo "previous: $CURRENT"
+          echo "next:     $NEXT"
+          if [ "$NEXT" = "$CURRENT" ]; then
+            echo "::notice::No feat/fix/breaking commits since $CURRENT - nothing to release"
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+            echo "name=$NEXT" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Set up JDK 21
         uses: actions/setup-java@v6
@@ -40,7 +67,11 @@ jobs:
       - name: Install SDK components
         run: sdkmanager "platforms;android-37.0" "build-tools;36.0.0"
 
+      - name: Unit tests
+        run: ./gradlew testDebugUnitTest --stacktrace
+
       - name: Verify required secrets
+        if: steps.version.outputs.publish == 'true'
         env:
           KEYSTORE: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           PLAY_CREDENTIALS: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
@@ -51,24 +82,30 @@ jobs:
           fi
 
       - name: Decode upload keystore
+        if: steps.version.outputs.publish == 'true'
         env:
           KEYSTORE: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
         run: echo "$KEYSTORE" | base64 -d > "$RUNNER_TEMP/upload.jks"
 
-      - name: Drop local.properties
-        run: rm -f local.properties
-
-      - name: Unit tests
-        run: ./gradlew testDebugUnitTest --stacktrace
-
       - name: Publish bundle to internal track
+        if: steps.version.outputs.publish == 'true'
         env:
           RELEASE_STORE_FILE: ${{ runner.temp }}/upload.jks
           RELEASE_STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           RELEASE_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           RELEASE_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
           ANDROID_PUBLISHER_CREDENTIALS: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
-        run: ./gradlew publishReleaseBundle -PversionName="$(git describe --tags --always)"
+        run: ./gradlew publishReleaseBundle -PversionName="${{ steps.version.outputs.name }}"
+
+      - name: Tag published commit
+        if: steps.version.outputs.publish == 'true'
+        env:
+          VERSION: ${{ steps.version.outputs.name }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$VERSION" -m "$VERSION"
+          git push origin "$VERSION"
 
       - name: Upload bundle artifact
         if: always()

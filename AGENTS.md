@@ -13,17 +13,25 @@ The Gradle wrapper is committed; run `./gradlew` (Gradle 9.7.0). CI uses JDK 21 
 
 ## Releasing
 
-Every push to `main` runs `.github/workflows/play-internal.yml`, which runs the unit tests and
-uploads an App Bundle to the Play Console **internal** track via Gradle Play Publisher.
+Every push to `main` runs `.github/workflows/play-internal.yml`: unit tests, then an App Bundle
+upload to the Play Console **internal** track via Gradle Play Publisher.
 
+- **Version** comes from conventional commit subjects since the newest `v*` tag (`svu next`):
+  `fix:`/`perf:` → patch, `feat:` → minor, `!` or `BREAKING CHANGE:` → major (strict semver, so a
+  breaking change on 0.x jumps to 1.0.0). A push whose commits contain no `feat`/`fix` publishes
+  nothing, so merge commits and `chore:`/`docs:`/`ci:` work stay off the testing track.
+- `versionName` is the computed tag (`v0.6.0`); `versionCode` is resolved by
+  `ResolutionStrategy.AUTO` (Play's max + 1) whenever publisher credentials are present.
+- The published commit is tagged `vX.Y.Z` and the tag pushed only after the upload succeeds, so a
+  failed release never advances the version. `git describe` therefore stays meaningful.
+- PRs are checked by `.github/workflows/commitlint.yml`; non-conventional subjects fail the check
+  instead of silently producing no version bump.
 - Publish locally with `./gradlew publishReleaseBundle --track internal`.
 - Credentials come from `ANDROID_PUBLISHER_CREDENTIALS` (service-account JSON contents); signing
   comes from `RELEASE_STORE_FILE`, `RELEASE_STORE_PASSWORD`, `RELEASE_KEY_ALIAS`,
   `RELEASE_KEY_PASSWORD`. Without those env vars the release build falls back to the debug keystore
-  and no version-code resolution happens, so local `bundleRelease` still works.
-- `versionCode` is resolved by `ResolutionStrategy.AUTO` (Play's max + 1) whenever publisher
-  credentials are present; `versionName` is passed as `-PversionName` (CI uses `git describe`).
-  Both can also be overridden with `-PversionCode` / `-PversionName` for local builds.
+  and no version-code resolution happens, so local `bundleRelease` still works with the literal
+  `versionCode` in `app/build.gradle.kts` (override with `-PversionCode` / `-PversionName`).
 - The upload key is `~/Android/key.jks` (alias `key0`); Play rejects bundles signed with anything
   else. Keep a backup — losing it requires an upload-key reset in Play Console.
 
