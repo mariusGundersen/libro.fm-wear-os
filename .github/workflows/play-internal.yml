@@ -11,7 +11,7 @@ on:
       track:
         description: "Play track to publish to (Wear OS form factor)"
         required: false
-        default: "wear:qa"
+        default: "wear:internal"
       force:
         description: "Publish even with no feat/fix commits (bumps patch)"
         type: boolean
@@ -112,7 +112,7 @@ jobs:
           RELEASE_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           RELEASE_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
           ANDROID_PUBLISHER_CREDENTIALS: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
-        run: ./gradlew publishReleaseBundle -PversionName="${{ steps.version.outputs.name }}" -PplayTrack="${{ inputs.track || 'wear:qa' }}"
+        run: ./gradlew publishReleaseBundle -PversionName="${{ steps.version.outputs.name }}" -PplayTrack="${{ inputs.track || 'wear:internal' }}"
 
       - name: Tag published commit
         if: steps.version.outputs.publish == 'true'

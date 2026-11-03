@@ -21,12 +21,14 @@ upload to the Play Console **internal** track via Gradle Play Publisher.
   breaking change on 0.x jumps to 1.0.0). A push whose commits contain no `feat`/`fix` publishes
   nothing, so merge commits and `chore:`/`docs:`/`ci:` work stay off the testing track. A manual
   run can force a patch release with the `force` input.
-- **Track:** Wear OS form-factor tracks are prefixed (`wear:qa`, `wear:beta`, `wear:production`;
-  closed testing is `wear:<name>`). The app publishes to **`wear:qa`** (internal testing) by default;
-  override with `-PplayTrack=wear:beta` locally or the `track` input on a manual workflow run.
-  Play Console must have the dedicated Wear OS track enabled (Test and release → Advanced settings →
-  Form factors → Wear OS → Manage → *Use a dedicated release track for Wear OS*), otherwise the
-  upload fails with a track-not-found error.
+- **Track:** Wear OS form-factor tracks are app-specific. This app has `wear:internal` (internal
+  testing, currently serving version code 7), `wear:beta` (open testing), `wear:Closed testing`
+  (closed testing) and `wear:production`; the mobile tracks exist but are unused. Google documents
+  `wear:qa` as the generic internal-testing name, but this app uses `wear:internal` — check with the
+  Play API before changing it. Default is `wear:internal`; override with `-PplayTrack=…` locally or
+  the `track` input on a manual workflow run. Play Console must have the dedicated Wear OS track
+  enabled (Test and release → Advanced settings → Form factors → Wear OS → Manage → *Use a
+  dedicated release track for Wear OS*), otherwise the upload fails with a track-not-found error.
 - `versionName` is the computed tag (`v0.6.0`); `versionCode` is resolved by
   `ResolutionStrategy.AUTO` (Play's max + 1) whenever publisher credentials are present.
 - The published commit is tagged `vX.Y.Z` and the tag pushed only after the upload succeeds, so a
