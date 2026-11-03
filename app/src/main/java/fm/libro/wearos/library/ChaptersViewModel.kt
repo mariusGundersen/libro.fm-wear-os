@@ -11,11 +11,16 @@ import fm.libro.wearos.player.AudiobookMediaMapper
 import fm.libro.wearos.player.PlayerStateRepository
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import kotlin.time.Duration.Companion.milliseconds
+
+data class ChaptersUiState(
+    val book: Audiobook? = null,
+    val trackProgressMs: Map<Int, Long> = emptyMap(),
+)
 
 @HiltViewModel
 class ChaptersViewModel
@@ -29,10 +34,15 @@ class ChaptersViewModel
 
     private val isbn: String = savedStateHandle["isbn"] ?: ""
 
-    val book: StateFlow<Audiobook?> = db.downloadedBookDao()
-        .getByIsbnWithProgress(isbn).map { entity ->
-            entity?.let { Audiobook.fromDownloaded(it) }
-        }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
+    val uiState: StateFlow<ChaptersUiState> = combine(
+        db.downloadedBookDao().getByIsbnWithProgress(isbn),
+        db.trackProgressDao().getAllForIsbn(isbn),
+    ) { entity, tracks ->
+        ChaptersUiState(
+            book = entity?.let { Audiobook.fromDownloaded(it) },
+            trackProgressMs = tracks.associate { it.trackIndex to it.positionMs },
+        )
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, ChaptersUiState())
 
     fun playTrack(index: Int) {
         viewModelScope.launch {

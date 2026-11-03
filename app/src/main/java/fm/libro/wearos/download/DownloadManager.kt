@@ -7,6 +7,7 @@ import fm.libro.wearos.data.AppDatabase
 import fm.libro.wearos.data.DownloadedBookEntity
 import fm.libro.wearos.data.PlaybackProgressEntity
 import fm.libro.wearos.data.StoredTrack
+import fm.libro.wearos.data.TrackProgressEntity
 import com.google.gson.Gson
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -73,7 +74,7 @@ class DownloadManager(private val context: Context) {
                     downloadedAt = System.currentTimeMillis(),
                 )
             )
-            saveProgress(book)
+            saveProgress(book, manifest)
         } else {
             val mp3Files = manifest.parts.flatMapIndexed { index, part ->
                 downloadAndExtractZip(part.url, dir) { partProgress ->
@@ -101,7 +102,7 @@ class DownloadManager(private val context: Context) {
                     downloadedAt = System.currentTimeMillis(),
                 )
             )
-            saveProgress(book)
+            saveProgress(book, manifest)
         }
     }
 
@@ -112,21 +113,42 @@ class DownloadManager(private val context: Context) {
         dir?.deleteRecursively()
         db.downloadedBookDao().deleteByIsbn(isbn)
         db.playbackProgressDao().deleteByIsbn(isbn)
+        db.trackProgressDao().deleteByIsbn(isbn)
     }
 
-    private suspend fun saveProgress(book: Audiobook) {
+    private suspend fun saveProgress(book: Audiobook, manifest: DownloadManifest) {
         val meta = book.userMetadata ?: return
         val trackIndex = meta.trackIndex ?: return
         val trackSeconds = meta.trackSeconds ?: return
         if (trackIndex == 0 && trackSeconds == 0f) return
+        val now = System.currentTimeMillis()
         db.playbackProgressDao().upsert(
             PlaybackProgressEntity(
                 isbn = book.isbn,
                 trackIndex = trackIndex,
                 positionMs = (trackSeconds * 1000).toLong(),
                 playbackSpeed = 1.0f,
-                updatedAt = System.currentTimeMillis(),
+                updatedAt = now,
             )
+        )
+        db.trackProgressDao().upsertAll(
+            manifest.tracks.mapIndexedNotNull { index, track ->
+                when {
+                    index < trackIndex -> TrackProgressEntity(
+                        isbn = book.isbn,
+                        trackIndex = index,
+                        positionMs = track.lengthSec * 1000L,
+                        updatedAt = now,
+                    )
+                    index == trackIndex -> TrackProgressEntity(
+                        isbn = book.isbn,
+                        trackIndex = index,
+                        positionMs = (trackSeconds * 1000).toLong(),
+                        updatedAt = now,
+                    )
+                    else -> null
+                }
+            }
         )
     }
 

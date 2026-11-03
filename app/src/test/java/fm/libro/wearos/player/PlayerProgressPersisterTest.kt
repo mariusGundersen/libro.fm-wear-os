@@ -1,6 +1,7 @@
 package fm.libro.wearos.player
 
 import android.os.Looper
+import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import kotlinx.coroutines.CoroutineScope
@@ -13,6 +14,7 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -30,6 +32,7 @@ class PlayerProgressPersisterTest {
     private lateinit var scheduler: TestCoroutineScheduler
     private lateinit var scope: CoroutineScope
     private lateinit var dao: FakePlaybackProgressDao
+    private lateinit var trackDao: FakeTrackProgressDao
     private lateinit var player: FakeAudioPlayer
     private lateinit var persister: PlayerProgressPersister
 
@@ -39,9 +42,10 @@ class PlayerProgressPersisterTest {
         Dispatchers.setMain(UnconfinedTestDispatcher(scheduler))
         scope = CoroutineScope(StandardTestDispatcher(scheduler))
         dao = FakePlaybackProgressDao()
+        trackDao = FakeTrackProgressDao()
         player = FakeAudioPlayer()
         player.loadMediaItems(listOf("${isbn}_0", "${isbn}_1", "${isbn}_2"))
-        persister = PlayerProgressPersister(player, dao, scope) { scheduler.currentTime }
+        persister = PlayerProgressPersister(player, dao, trackDao, scope) { scheduler.currentTime }
         player.addListener(persister)
         drain()
     }
@@ -119,6 +123,35 @@ class PlayerProgressPersisterTest {
         val saved = dao.lastWriteFor(isbn)
         assertEquals(2, saved?.trackIndex)
         assertEquals(0L, saved?.positionMs)
+    }
+
+    @Test
+    fun `keeps the progress of the chapter that was left when changing chapter`() {
+        player.play()
+        player.advancePositionTo(30_000)
+        player.pause()
+        drain()
+
+        player.play()
+        player.transitionToTrack(2)
+        drain()
+
+        assertEquals(2, dao.lastWriteFor(isbn)?.trackIndex)
+        assertEquals(30_000L, trackDao.lastWriteFor(isbn, 0)?.positionMs)
+        assertEquals(0L, trackDao.lastWriteFor(isbn, 2)?.positionMs)
+    }
+
+    @Test
+    fun `marks a chapter complete only when it plays to the end`() {
+        persister.onPositionDiscontinuity(
+            positionInfo(index = 0, positionMs = 60_000),
+            positionInfo(index = 1, positionMs = 0),
+            Player.DISCONTINUITY_REASON_AUTO_TRANSITION,
+        )
+        drain()
+
+        assertEquals(60_000L, trackDao.lastWriteFor(isbn, 0)?.positionMs)
+        assertNull(trackDao.lastWriteFor(isbn, 1))
     }
 
     @Test
@@ -232,5 +265,14 @@ class PlayerProgressPersisterTest {
     private fun drain() {
         shadowOf(Looper.getMainLooper()).idle()
         scheduler.runCurrent()
+    }
+
+    private fun positionInfo(index: Int, positionMs: Long): Player.PositionInfo {
+        val id = "${isbn}_$index"
+        val item = MediaItem.Builder()
+            .setMediaId(id)
+            .setUri("file:///audio/$id.mp3")
+            .build()
+        return Player.PositionInfo(null, index, item, null, index, positionMs, positionMs, -1, -1)
     }
 }

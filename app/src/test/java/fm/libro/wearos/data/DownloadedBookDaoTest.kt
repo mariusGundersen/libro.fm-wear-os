@@ -69,6 +69,28 @@ class DownloadedBookDaoTest {
             assertEquals(1_000L, result?.progress?.positionMs)
         }
 
+    @Test
+    fun trackProgress_keepsEachChapterSeparate() =
+        runBlocking {
+            db.trackProgressDao().upsert(TrackProgressEntity(ISBN, 0, 30_000L, 1L))
+            db.trackProgressDao().upsert(TrackProgressEntity(ISBN, 2, 5_000L, 2L))
+
+            val rows = db.trackProgressDao().getAllForIsbn(ISBN).first()
+
+            assertEquals(listOf(0, 2), rows.map { it.trackIndex })
+            assertEquals(30_000L, rows.first().positionMs)
+        }
+
+    @Test
+    fun trackProgress_isDeletedWithTheBook() =
+        runBlocking {
+            db.trackProgressDao().upsert(TrackProgressEntity(ISBN, 0, 30_000L, 1L))
+
+            db.trackProgressDao().deleteByIsbn(ISBN)
+
+            assertEquals(emptyList<TrackProgressEntity>(), db.trackProgressDao().getAllForIsbn(ISBN).first())
+        }
+
     private fun book() =
         DownloadedBookEntity(
             isbn = ISBN,

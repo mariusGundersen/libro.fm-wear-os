@@ -43,6 +43,7 @@ import dagger.hilt.android.scopes.ServiceScoped
 import fm.libro.wearos.complication.DataUpdates
 import fm.libro.wearos.data.AppDatabase
 import fm.libro.wearos.data.PlaybackProgressDao
+import fm.libro.wearos.data.TrackProgressDao
 import fm.libro.wearos.offload.AudioOffloadManager
 import fm.libro.wearos.player.LibroMediaLibrarySessionCallback
 import fm.libro.wearos.player.PlayerProgressPersister
@@ -209,13 +210,21 @@ object PlaybackServiceModule {
 
     @ServiceScoped
     @Provides
+    fun trackProgressDao(
+        db: AppDatabase,
+    ): TrackProgressDao = db.trackProgressDao()
+
+    @ServiceScoped
+    @Provides
     fun playerProgressPersister(
         player: Player,
         playbackProgressDao: PlaybackProgressDao,
+        trackProgressDao: TrackProgressDao,
         @ForApplicationScope applicationScope: CoroutineScope,
     ): PlayerProgressPersister = PlayerProgressPersister(
         player = player,
         playbackProgressDao = playbackProgressDao,
+        trackProgressDao = trackProgressDao,
         scope = applicationScope,
     ).also {
         player.addListener(it)

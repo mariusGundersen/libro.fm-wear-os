@@ -5,6 +5,8 @@ import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import fm.libro.wearos.data.PlaybackProgressDao
 import fm.libro.wearos.data.PlaybackProgressEntity
+import fm.libro.wearos.data.TrackProgressDao
+import fm.libro.wearos.data.TrackProgressEntity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -15,6 +17,7 @@ import kotlinx.coroutines.launch
 class PlayerProgressPersister(
     private val player: Player,
     private val playbackProgressDao: PlaybackProgressDao,
+    private val trackProgressDao: TrackProgressDao,
     private val scope: CoroutineScope,
     private val nowMs: () -> Long = System::currentTimeMillis,
 ) : Player.Listener {
@@ -58,17 +61,30 @@ class PlayerProgressPersister(
         newPosition: Player.PositionInfo,
         reason: Int,
     ) {
-        if (reason != Player.DISCONTINUITY_REASON_SEEK) return
-        val mediaItem = player.currentMediaItem ?: return
-        val isbn = isbnFrom(mediaItem) ?: return
+        when (reason) {
+            Player.DISCONTINUITY_REASON_SEEK -> {
+                val mediaItem = player.currentMediaItem ?: return
+                val isbn = isbnFrom(mediaItem) ?: return
 
-        write(
-            isbn = isbn,
-            trackIndex = player.currentMediaItemIndex,
-            positionMs = newPosition.positionMs.coerceAtLeast(0L),
-            speed = player.playbackParameters.speed,
-            force = true,
-        )
+                write(
+                    isbn = isbn,
+                    trackIndex = player.currentMediaItemIndex,
+                    positionMs = newPosition.positionMs.coerceAtLeast(0L),
+                    speed = player.playbackParameters.speed,
+                    force = true,
+                )
+            }
+            Player.DISCONTINUITY_REASON_AUTO_TRANSITION -> {
+                val mediaItem = oldPosition.mediaItem ?: return
+                val isbn = isbnFrom(mediaItem) ?: return
+
+                writeTrackProgress(
+                    isbn = isbn,
+                    trackIndex = oldPosition.mediaItemIndex,
+                    positionMs = oldPosition.positionMs.coerceAtLeast(0L),
+                )
+            }
+        }
     }
 
     override fun onPlayerError(error: PlaybackException) {
@@ -123,8 +139,31 @@ class PlayerProgressPersister(
             playbackSpeed = speed,
             updatedAt = now,
         )
+        val trackEntity = TrackProgressEntity(
+            isbn = isbn,
+            trackIndex = trackIndex,
+            positionMs = positionMs,
+            updatedAt = now,
+        )
         scope.launch {
             playbackProgressDao.upsert(entity)
+            trackProgressDao.upsert(trackEntity)
+        }
+    }
+
+    private fun writeTrackProgress(
+        isbn: String,
+        trackIndex: Int,
+        positionMs: Long,
+    ) {
+        val entity = TrackProgressEntity(
+            isbn = isbn,
+            trackIndex = trackIndex,
+            positionMs = positionMs,
+            updatedAt = nowMs(),
+        )
+        scope.launch {
+            trackProgressDao.upsert(entity)
         }
     }
 

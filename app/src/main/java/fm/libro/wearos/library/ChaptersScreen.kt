@@ -27,9 +27,10 @@ fun ChaptersScreen(
     viewModel: ChaptersViewModel,
     onTrackSelected: () -> Unit,
 ) {
-    val book by viewModel.book.collectAsState()
+    val state by viewModel.uiState.collectAsState()
 
-    val tracks = book?.tracks;
+    val book = state.book
+    val tracks = book?.tracks
 
     val currentTrack = book?.trackIndex ?: 0
     val currentPosition = book?.positionMs ?: 0L
@@ -84,12 +85,16 @@ fun ChaptersScreen(
                             modifier = Modifier.size(32.dp),
                             strokeWidth = CircularProgressIndicatorDefaults.smallStrokeWidth,
                             progress = {
-                                if (index < currentTrack) {
-                                    1f
-                                } else if (index > currentTrack){
+                                val lengthSec = track.lengthSec
+                                val positionMs = if (index == currentTrack) {
+                                    currentPosition
+                                } else {
+                                    state.trackProgressMs[index] ?: 0L
+                                }
+                                if (lengthSec <= 0) {
                                     0f
-                                } else{
-                                    currentPosition / 1000f / track.lengthSec
+                                } else {
+                                    (positionMs / 1000f / lengthSec).coerceIn(0f, 1f)
                                 }
                             }
                         )

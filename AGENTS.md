@@ -50,7 +50,7 @@ library are presented.
 |-------|-------|---------|
 | API | `api/LibroFmClient.kt` (singleton), `api/LibroFmApi.kt` (Retrofit interface), `api/LibraryPagingSource.kt` | Retrofit + OkHttp with Paging 3. Bearer token passed manually via `Authorization` header. |
 | Auth | `auth/AuthManager.kt` | DataStore Preferences (`librofm_auth`). Stores token, username, password. |
-| Database | `data/AppDatabase.kt` | Room v2 (`librofm.db`). Two entities: `DownloadedBookEntity`, `PlaybackProgressEntity`. DAOs expose `Flow` for reactive UI. |
+| Database | `data/AppDatabase.kt` | Room v4 (`librofm.db`). Three entities: `DownloadedBookEntity`, `PlaybackProgressEntity`, `TrackProgressEntity`. DAOs expose `Flow` for reactive UI. |
 | Downloads | `download/DownloadManager.kt`, `download/AudiobookDownloadWorker.kt` | WorkManager `CoroutineWorker` running as foreground service. Downloads M4B (single file) or MP3 (ZIP parts). |
 | Player | `player/PlaybackService.kt`, `player/PlayerProgressPersister.kt`, `player/PlayerViewModel.kt` | Media3 ExoPlayer in a Horologist `LifecycleMediaLibraryService`. Progress is written by `PlayerProgressPersister`, a `Player.Listener` attached to the player from `di/PlaybackServiceModule.kt`. |
 
@@ -74,6 +74,13 @@ removed the persister is silently never instantiated, and nothing is saved.
 - **Save triggers:** pause (`!isPlaying && !playWhenReady`), `EVENT_MEDIA_ITEM_TRANSITION`,
   `STATE_ENDED`, `STATE_IDLE`, `onPlayerError`, seek discontinuities, an explicit `flush()` on
   service destroy, and a 5s periodic save while playing.
+- **Per-chapter progress:** every book-progress save also upserts the same
+  `(isbn, trackIndex, positionMs)` into `track_progress`, so changing chapter leaves the previous
+  chapter's row untouched. A chapter is only marked complete (position = its end) when Media3
+  reports `DISCONTINUITY_REASON_AUTO_TRANSITION`, i.e. it actually played to the end. The Chapters
+  screen reads these rows instead of inferring completion from `index < currentTrack`.
+  `MIGRATION_3_4` backfills them from the stored `tracksJson` lengths, marking every chapter below
+  the saved `trackIndex` as complete.
 - **Throttling:** writes are deduplicated on `(isbn, trackIndex, positionMs)` and otherwise
   throttled to 5s, except on the forced paths above. The clock is injected as `nowMs` for tests.
 - **Never write a position of `0` deliberately:** position 0 is a valid save (e.g. right after an
@@ -96,8 +103,9 @@ state — that loses the pause save, which is the bug this class exists to preve
 
 - `downloaded_books`: isbn (PK), title, author, coverUrl, coverLocalPath, format, filePath, fileSizeBytes, durationSeconds, trackCount, tracksJson, downloadedAt
 - `playback_progress`: isbn (PK), trackIndex, positionMs, playbackSpeed, updatedAt
+- `track_progress`: isbn + trackIndex (composite PK), positionMs, updatedAt — per-chapter positions so leaving a chapter keeps its real progress
 
-Database migrations are in `AppDatabase.kt`. Current version: 3.
+Database migrations are in `AppDatabase.kt`. Current version: 4.
 
 ### API Endpoints
 
@@ -167,6 +175,8 @@ app/src/main/java/fm/libro/wearos/
 │   ├── DownloadedBookDao.kt           # Book queries (Flow + suspend)
 │   ├── PlaybackProgressEntity.kt      # Playback position entity
 │   ├── PlaybackProgressDao.kt         # Progress queries
+│   ├── TrackProgressEntity.kt         # Per-chapter position entity
+│   ├── TrackProgressDao.kt            # Per-chapter progress queries
 │   └── StoredTrack.kt                 # Track metadata for JSON serialization
 ├── di/                                # Hilt modules
 │   ├── AppModule.kt
@@ -209,5 +219,6 @@ Tests live in `app/src/test/java/fm/libro/wearos/player/`:
 ```
 ├── FakeAudioPlayer.kt                 # SimpleBasePlayer-based Player for listener tests
 ├── FakePlaybackProgressDao.kt         # In-memory PlaybackProgressDao
+├── FakeTrackProgressDao.kt            # In-memory TrackProgressDao
 └── PlayerProgressPersisterTest.kt     # Save-trigger, dedup and throttle coverage
 ```
