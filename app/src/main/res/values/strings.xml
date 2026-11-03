@@ -73,4 +73,5 @@
     <string name="seen_login_details">Seen Login Details</string>
     <string name="complication_content_description">Libro.fm\n%1$s\n%2$s</string>
     <string name="show_licenses">App Licenses</string>
+    <string name="browse_library_playlists_button">Books</string>
 </resources>

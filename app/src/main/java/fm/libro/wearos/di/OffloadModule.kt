@@ -1,7 +1,7 @@
 package fm.libro.wearos.di
 
-import android.os.Build
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.annotation.OptIn
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer.AudioOffloadListener
 import com.google.android.horologist.media3.logging.ErrorReporter
 import dagger.Module
@@ -24,6 +24,7 @@ object OffloadModule {
     @Singleton
     fun audioOffloadListenerList(): AudioOffloadListenerList = AudioOffloadListenerList()
 
+    @OptIn(UnstableApi::class)
     @Provides
     @Singleton
     fun audioOffloadListener(
@@ -45,12 +46,10 @@ object OffloadModule {
         @ForApplicationScope coroutineScope: CoroutineScope,
     ): AudioOffloadManager {
         return AudioOffloadManager(errorReporter).also { manager ->
-            if (Build.VERSION.SDK_INT >= 30) {
-                audioOffloadListenerList.addListener(manager.audioOffloadListener)
+            audioOffloadListenerList.addListener(manager.audioOffloadListener)
 
-                coroutineScope.launch {
-                    manager.printDebugLogsLoop()
-                }
+            coroutineScope.launch {
+                manager.printDebugLogsLoop()
             }
         }
     }

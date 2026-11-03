@@ -30,7 +30,7 @@ import androidx.wear.compose.material3.OutlinedButton
 import androidx.wear.compose.material3.Text
 import coil.compose.AsyncImage
 import fm.libro.wearos.R
-import fm.libro.wearos.api.models.Audiobook
+import fm.libro.wearos.models.Audiobook
 import java.io.File
 
 @Composable
@@ -38,10 +38,9 @@ fun BookDetailScreen(
     viewModel: BookDetailViewModel,
     onPlay: () -> Unit,
     onBack: () -> Unit,
-    onPlaylist: () -> Unit = {},
+    onChapters: (isbn: String) -> Unit = {},
 ) {
     val state by viewModel.uiState.collectAsState()
-
 
     ScalingLazyColumn(
         modifier = Modifier
@@ -91,7 +90,7 @@ fun BookDetailScreen(
                             )
                         }
                         OutlinedButton(
-                            onClick = onPlaylist,
+                            onClick = { state.book?.isbn?.let(onChapters) },
                         ) {
                             Icon(
                                 painter = painterResource(R.drawable.ic_chapters),
@@ -170,9 +169,9 @@ fun AudiobookInfo(book: Audiobook, coverLocalPath: String? = null) {
             maxLines = 1,
         )
 
-        if (book.audiobookInfo?.narrators?.isNotEmpty() == true) {
+        if (book.narrators.isNotEmpty()) {
             Text(
-                text = "Narrator: ${book.audiobookInfo.narrators.first()}",
+                text = "Narrator: ${book.narratorString}",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -186,12 +185,12 @@ fun AudiobookInfo(book: Audiobook, coverLocalPath: String? = null) {
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
 
-        if (book.userMetadata != null) {
+        if (book.isFinished || book.isStarted) {
             Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = when {
                     book.isFinished -> "Finished"
-                    book.isStarted -> "${book.listeningProgressPercent}% · ${book.remainingTimeString} remaining"
+                    book.isStarted -> "${book.progressPercent}% · ${book.remainingTimeString} remaining"
                     else -> "Not started"
                 },
                 style = MaterialTheme.typography.bodySmall,

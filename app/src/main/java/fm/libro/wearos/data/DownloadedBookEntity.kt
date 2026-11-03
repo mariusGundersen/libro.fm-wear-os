@@ -17,4 +17,5 @@ data class DownloadedBookEntity(
     val trackCount: Int,
     val tracksJson: String, // JSON array of track metadata
     val downloadedAt: Long,
+    val narratorsJson: String, // JSON array of narrator names
 )

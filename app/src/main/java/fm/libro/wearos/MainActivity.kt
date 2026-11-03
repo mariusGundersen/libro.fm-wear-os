@@ -4,11 +4,9 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.navigation.NavHostController
 import androidx.wear.compose.navigation.rememberSwipeDismissableNavController
 import dagger.hilt.android.AndroidEntryPoint
 import fm.libro.wearos.auth.AuthManager
-import fm.libro.wearos.library.BookStore
 import fm.libro.wearos.navigation.AppNavGraph
 import fm.libro.wearos.player.LibroVolumeViewModel
 import fm.libro.wearos.ui.theme.LibroFmTheme
@@ -19,9 +17,6 @@ class MainActivity : ComponentActivity() {
 
     @Inject
     lateinit var authManager: AuthManager
-
-    @Inject
-    lateinit var bookStore: BookStore
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -34,7 +29,6 @@ class MainActivity : ComponentActivity() {
             LibroFmTheme {
                 AppNavGraph(
                     authManager = authManager,
-                    bookStore = bookStore,
                     navController = navController,
                     volumeViewModel = volumeViewModel,
                 )

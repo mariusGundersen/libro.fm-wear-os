@@ -41,8 +41,12 @@ import dagger.hilt.android.components.ServiceComponent
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.android.scopes.ServiceScoped
 import fm.libro.wearos.complication.DataUpdates
+import fm.libro.wearos.data.AppDatabase
+import fm.libro.wearos.data.PlaybackProgressDao
+import fm.libro.wearos.data.TrackProgressDao
 import fm.libro.wearos.offload.AudioOffloadManager
 import fm.libro.wearos.player.LibroMediaLibrarySessionCallback
+import fm.libro.wearos.player.PlayerProgressPersister
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
@@ -177,6 +181,7 @@ object PlaybackServiceModule {
     fun mediaLibrarySession(
         service: Service,
         player: Player,
+        playerProgressPersister: PlayerProgressPersister,
         librarySessionCallback: MediaLibraryService.MediaLibrarySession.Callback,
         intentBuilder: IntentBuilder,
     ): MediaLibrarySession =
@@ -190,11 +195,40 @@ object PlaybackServiceModule {
                 (service as LifecycleOwner).lifecycle.addObserver(
                     object : DefaultLifecycleObserver {
                         override fun onDestroy(owner: LifecycleOwner) {
+                            playerProgressPersister.flush()
                             it.release()
                         }
                     },
                 )
             }
+
+    @ServiceScoped
+    @Provides
+    fun playbackProgressDao(
+        db: AppDatabase,
+    ): PlaybackProgressDao = db.playbackProgressDao()
+
+    @ServiceScoped
+    @Provides
+    fun trackProgressDao(
+        db: AppDatabase,
+    ): TrackProgressDao = db.trackProgressDao()
+
+    @ServiceScoped
+    @Provides
+    fun playerProgressPersister(
+        player: Player,
+        playbackProgressDao: PlaybackProgressDao,
+        trackProgressDao: TrackProgressDao,
+        @ForApplicationScope applicationScope: CoroutineScope,
+    ): PlayerProgressPersister = PlayerProgressPersister(
+        player = player,
+        playbackProgressDao = playbackProgressDao,
+        trackProgressDao = trackProgressDao,
+        scope = applicationScope,
+    ).also {
+        player.addListener(it)
+    }
 
     @ServiceScoped
     @Provides

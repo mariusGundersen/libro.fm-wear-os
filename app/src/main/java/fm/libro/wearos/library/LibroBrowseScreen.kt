@@ -8,18 +8,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
+import androidx.wear.compose.foundation.lazy.items
 import androidx.wear.compose.material3.Card
 import androidx.wear.compose.material3.ListHeader
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.Text
-import coil.compose.AsyncImage
-import fm.libro.wearos.data.DownloadedBookEntity
-import java.io.File
 
 @Composable
 fun LibroBrowseScreen(
@@ -28,6 +23,7 @@ fun LibroBrowseScreen(
     onBrowseAllClick: () -> Unit,
 ) {
     val books by viewModel.downloadedBooks.collectAsState()
+    val isAuthenticated by viewModel.isAuthenticated.collectAsState()
 
     ScalingLazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -52,10 +48,10 @@ fun LibroBrowseScreen(
                 )
             }
         } else {
-            items(books.size, key = { books[it].isbn }) { index ->
-                DownloadedBookCard(
-                    book = books[index],
-                    onClick = { onBookClick(books[index].isbn) },
+            items(books, key = { it.isbn }) { book ->
+                AudiobookCard(
+                    book = book,
+                    onClick = { onBookClick(book.isbn) },
                 )
             }
         }
@@ -68,7 +64,7 @@ fun LibroBrowseScreen(
                     .padding(top = 8.dp),
             ) {
                 Text(
-                    text = if (viewModel.isAuthenticated) { "Browse online" } else { "Log in to browse" },
+                    text = if (isAuthenticated) { "Browse online" } else { "Log in to browse" },
                     style = MaterialTheme.typography.bodyLarge,
                     modifier = Modifier.padding(12.dp),
                 )
@@ -77,43 +73,3 @@ fun LibroBrowseScreen(
     }
 }
 
-@Composable
-private fun DownloadedBookCard(
-    book: DownloadedBookEntity,
-    onClick: () -> Unit,
-) {
-    Card(
-        onClick = onClick,
-        modifier = Modifier.fillMaxWidth(),
-        contentPadding = PaddingValues(0.dp),
-    ) {
-        val coverModel: Any? = book.coverLocalPath?.let { File(it) }
-            ?: book.coverUrl?.let { "https:$it" }
-        if (coverModel != null) {
-            AsyncImage(
-                model = coverModel,
-                contentDescription = book.title,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clipToBounds(),
-                contentScale = ContentScale.FillWidth,
-            )
-        }
-
-        Text(
-            text = book.title,
-            style = MaterialTheme.typography.bodyLarge,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.padding(12.dp),
-        )
-        Text(
-            text = book.author,
-            style = MaterialTheme.typography.bodySmall,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(start = 12.dp, bottom = 12.dp),
-        )
-    }
-}

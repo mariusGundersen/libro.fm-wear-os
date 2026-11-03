@@ -12,12 +12,10 @@ import androidx.work.WorkManager
 import com.google.android.horologist.media.data.repository.PlayerRepositoryImpl
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
-import fm.libro.wearos.api.models.Audiobook
-import fm.libro.wearos.api.models.AudiobookInfo
 import fm.libro.wearos.data.AppDatabase
-import fm.libro.wearos.data.DownloadedBookEntity
 import fm.libro.wearos.download.AudiobookDownloadWorker
 import fm.libro.wearos.download.DownloadManager
+import fm.libro.wearos.models.Audiobook
 import fm.libro.wearos.player.AudiobookMediaMapper
 import fm.libro.wearos.player.PlayerStateRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -45,7 +43,7 @@ class BookDetailViewModel
         private val workManager: WorkManager,
         private val playerRepository: PlayerRepositoryImpl,
         private val playerStateRepository: PlayerStateRepository,
-        private val bookStore: BookStore,
+        bookRepository: BookRepository,
         savedStateHandle: SavedStateHandle,
     ) : ViewModel() {
 
@@ -56,25 +54,24 @@ class BookDetailViewModel
     val uiState: StateFlow<BookDetailUiState> = _uiState.asStateFlow()
 
     init {
-        bookStore.get(isbn)?.let { book ->
-            _uiState.value = _uiState.value.copy(book = book)
-        }
+        _uiState.value = _uiState.value.copy(book = bookRepository.getBook(isbn))
         observeDownloadedStatus()
         observeWorkManager()
     }
 
     private fun observeDownloadedStatus() {
         viewModelScope.launch {
-            db.downloadedBookDao().getByIsbnFlow(isbn).collect { entity ->
+            db.downloadedBookDao().getByIsbnWithProgress(isbn).collect { entity ->
                 if (entity != null) {
                     _uiState.value = _uiState.value.copy(
-                        book = entity.toAudiobook(),
+                        book = Audiobook.fromDownloaded(entity),
                         isDownloaded = true,
-                        coverLocalPath = entity.coverLocalPath,
+                        coverLocalPath = entity.book.coverLocalPath,
                     )
                 } else {
                     _uiState.value = _uiState.value.copy(
                         isDownloaded = false,
+                        coverLocalPath = null,
                     )
                 }
             }
@@ -137,6 +134,7 @@ class BookDetailViewModel
             author = book.authorString,
             coverUrl = book.coverUrl,
             durationSeconds = book.durationSeconds,
+            narrators = book.narrators,
         )
         val request = OneTimeWorkRequestBuilder<AudiobookDownloadWorker>()
             .setInputData(inputData)
@@ -177,50 +175,17 @@ class BookDetailViewModel
                     db.playbackProgressDao().getByIsbn(isbn)
                 }
 
+                playerStateRepository.setLastPlayingIsbn(isbn)
                 playerRepository.setMediaList(
                     mediaList,
                     progress?.trackIndex ?: 0,
                     progress?.positionMs?.milliseconds
                 )
                 playerRepository.play()
-                playerStateRepository.setLastPlayingIsbn(isbn)
             }
         }
     }
 
     private val workName: String
         get() = "${AudiobookDownloadWorker.WORK_NAME_PREFIX}$isbn"
-
-    private suspend fun DownloadedBookEntity.toAudiobook(): Audiobook {
-        val progress = db.playbackProgressDao().getByIsbn(isbn)
-        return Audiobook(
-            isbn = isbn,
-            title = title,
-            authors = author,
-            coverUrl = coverUrl,
-            audiobookInfo = AudiobookInfo(
-                narrators = null,
-                duration = durationSeconds,
-                sizeBytes = fileSizeBytes,
-                trackCount = trackCount,
-                partsCount = null,
-                audioLanguage = null,
-            ),
-            series = null,
-            seriesNum = null,
-            publisher = null,
-            publicationDate = null,
-            description = null,
-            userMetadata = if (progress != null) {
-                fm.libro.wearos.api.models.UserMetadata(
-                    trackIndex = progress.trackIndex,
-                    trackSeconds = progress.positionMs / 1000f,
-                    finished = false,
-                    addedAt = null,
-                )
-            } else {
-                null
-            },
-        )
-    }
 }

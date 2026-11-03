@@ -1,4 +1,6 @@
 import com.android.build.api.dsl.ApplicationExtension
+import com.github.triplet.gradle.androidpublisher.ReleaseStatus
+import com.github.triplet.gradle.androidpublisher.ResolutionStrategy
 
 plugins {
     id("com.android.application")
@@ -6,7 +8,12 @@ plugins {
     id("com.google.devtools.ksp")
     id("dagger.hilt.android.plugin")
     kotlin("plugin.serialization")
+    id("com.github.triplet.play")
 }
+
+val appVersionCode = providers.gradleProperty("versionCode").map(String::toInt).getOrElse(7)
+val appVersionName = providers.gradleProperty("versionName").getOrElse("0.5.0")
+val uploadStorePath = providers.environmentVariable("RELEASE_STORE_FILE")
 
 extensions.configure<ApplicationExtension> {
     namespace = "fm.libro.wearos"
@@ -15,9 +22,20 @@ extensions.configure<ApplicationExtension> {
     defaultConfig {
         applicationId = "fm.libro.wearos"
         minSdk = 30
-        targetSdk = 34
-        versionCode = 4
-        versionName = "0.2.0"
+        targetSdk = 35
+        versionCode = appVersionCode
+        versionName = appVersionName
+    }
+
+    signingConfigs {
+        uploadStorePath.orNull?.let { path ->
+            create("release") {
+                storeFile = file(path)
+                storePassword = providers.environmentVariable("RELEASE_STORE_PASSWORD").orNull
+                keyAlias = providers.environmentVariable("RELEASE_KEY_ALIAS").orNull
+                keyPassword = providers.environmentVariable("RELEASE_KEY_PASSWORD").orNull
+            }
+        }
     }
 
     buildTypes {
@@ -27,6 +45,8 @@ extensions.configure<ApplicationExtension> {
         }
         release {
             manifestPlaceholders["schemeSuffix"] = ""
+
+            signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")
 
             isMinifyEnabled = true
             isShrinkResources = true
@@ -40,6 +60,13 @@ extensions.configure<ApplicationExtension> {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    testOptions {
+        unitTests {
+            isIncludeAndroidResources = true
+            isReturnDefaultValues = true
+        }
     }
 
     buildFeatures {
@@ -150,4 +177,24 @@ dependencies {
 
     // Debug
     debugImplementation("androidx.compose.ui:ui-tooling")
+
+    testImplementation("junit:junit:4.13.2")
+    testImplementation("org.robolectric:robolectric:4.15.1")
+    testImplementation("androidx.test:core:1.6.1")
+    testImplementation("androidx.test.ext:junit:1.2.1")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")
+    testImplementation("androidx.media3:media3-test-utils:1.11.0")
+}
+
+play {
+    track.set(providers.gradleProperty("playTrack").getOrElse("internal"))
+    defaultToAppBundles.set(true)
+    releaseStatus.set(ReleaseStatus.COMPLETED)
+    resolutionStrategy.set(
+        if (providers.environmentVariable("ANDROID_PUBLISHER_CREDENTIALS").isPresent) {
+            ResolutionStrategy.AUTO
+        } else {
+            ResolutionStrategy.IGNORE
+        }
+    )
 }

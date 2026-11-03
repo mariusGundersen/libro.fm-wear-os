@@ -8,7 +8,6 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -23,16 +22,11 @@ class PlayerStateRepository @Inject constructor(
 ) {
     private val dataStore = context.playerDataStore
 
-    @Volatile
-    var currentIsbn: String? = null
-        internal set
-
     val lastPlayingIsbn: Flow<String?> = dataStore.data.map { prefs ->
         prefs[LAST_PLAYING_ISBN]
     }
 
     suspend fun setLastPlayingIsbn(isbn: String?) {
-        currentIsbn = isbn
         dataStore.edit { prefs ->
             if (isbn != null) {
                 prefs[LAST_PLAYING_ISBN] = isbn
@@ -40,10 +34,6 @@ class PlayerStateRepository @Inject constructor(
                 prefs.remove(LAST_PLAYING_ISBN)
             }
         }
-    }
-
-    suspend fun loadCachedIsbn() {
-        currentIsbn = lastPlayingIsbn.first()
     }
 
     companion object {
