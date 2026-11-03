@@ -27,6 +27,7 @@ permissions:
 
 env:
   SVU_VERSION: 3.4.4
+  SVU_SHA256: f113776c1c4c2a2a3c6e27991efaa8071aafc1ec5644fa77ff809ec69aacd5da
 
 jobs:
   publish:
@@ -40,10 +41,10 @@ jobs:
 
       - name: Install svu
         run: |
-          curl -sSfL -o svu.tar.gz "https://github.com/caarlos0/svu/releases/download/v${{ env.SVU_VERSION }}/svu_${{ env.SVU_VERSION }}_linux_amd64.tar.gz"
-          curl -sSfL -o checksums.txt "https://github.com/caarlos0/svu/releases/download/v${{ env.SVU_VERSION }}/checksums.txt"
-          grep " svu_${{ env.SVU_VERSION }}_linux_amd64.tar.gz$" checksums.txt | sha256sum -c -
-          tar -xzf svu.tar.gz svu
+          asset="svu_${SVU_VERSION}_linux_amd64.tar.gz"
+          curl -sSfL --retry 3 --retry-delay 2 -o "$asset" "https://github.com/caarlos0/svu/releases/download/v${SVU_VERSION}/${asset}"
+          echo "${SVU_SHA256}  ${asset}" | sha256sum -c -
+          tar -xzf "$asset" svu
           sudo install -m 0755 svu /usr/local/bin/svu
           svu --version | tail -5
 
