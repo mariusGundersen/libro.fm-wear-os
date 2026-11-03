@@ -8,7 +8,24 @@ Android Wear OS audiobook player for [Libro.fm](https://libro.fm). Single-module
 ./gradlew assembleDebug
 ```
 
-No Gradle wrapper is checked in; use system `gradle` or generate via `gradle wrapper`.
+The Gradle wrapper is committed; run `./gradlew` (Gradle 9.7.0). CI uses JDK 21 and SDK platform
+37 (`platforms;android-37.0`).
+
+## Releasing
+
+Every push to `main` runs `.github/workflows/play-internal.yml`, which runs the unit tests and
+uploads an App Bundle to the Play Console **internal** track via Gradle Play Publisher.
+
+- Publish locally with `./gradlew publishReleaseBundle --track internal`.
+- Credentials come from `ANDROID_PUBLISHER_CREDENTIALS` (service-account JSON contents); signing
+  comes from `RELEASE_STORE_FILE`, `RELEASE_STORE_PASSWORD`, `RELEASE_KEY_ALIAS`,
+  `RELEASE_KEY_PASSWORD`. Without those env vars the release build falls back to the debug keystore
+  and no version-code resolution happens, so local `bundleRelease` still works.
+- `versionCode` is resolved by `ResolutionStrategy.AUTO` (Play's max + 1) whenever publisher
+  credentials are present; `versionName` is passed as `-PversionName` (CI uses `git describe`).
+  Both can also be overridden with `-PversionCode` / `-PversionName` for local builds.
+- The upload key is `~/Android/key.jks` (alias `key0`); Play rejects bundles signed with anything
+  else. Keep a backup — losing it requires an upload-key reset in Play Console.
 
 ## Testing
 
